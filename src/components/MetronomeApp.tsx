@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ensureAudioReady, playWoodblock } from "../lib/woodblock";
+import {
+  ensureAudioReady,
+  getAudioState,
+  playWoodblock,
+  unlockAudioSync,
+} from "../lib/woodblock";
+import { attachWakeLock, stopWakeLock } from "../lib/wake-lock";
 
 const BPM_MIN = 40;
 const BPM_MAX = 240;
@@ -25,9 +31,10 @@ export function MetronomeApp() {
   const [bpm, setBpm] = useState(BPM_DEFAULT);
   const [playing, setPlaying] = useState(false);
   const [beat, setBeat] = useState(0);
-  const [volume, setVolume] = useState(0.8);
+  const [volume, setVolume] = useState(0.9);
   const [timerPreset, setTimerPreset] = useState(0);
   const [remaining, setRemaining] = useState(0);
+  const [audioHint, setAudioHint] = useState<string | null>(null);
   const beatsPerBar = 4;
 
   const bpmRef = useRef(bpm);
@@ -48,9 +55,31 @@ export function MetronomeApp() {
     playingRef.current = playing;
   }, [playing]);
 
+  // Keep screen awake while playing (iPhone won't sleep mid-practice)
+  useEffect(() => {
+    const cleanup = attachWakeLock(playing);
+    return () => {
+      cleanup();
+      if (!playing) stopWakeLock();
+    };
+  }, [playing]);
+
+  useEffect(() => {
+    return () => stopWakeLock();
+  }, []);
+
   const schedulerTick = useCallback(async () => {
     const ctx = await ensureAudioReady();
-    const scheduleAhead = 0.12;
+    if (ctx.state === "suspended") {
+      playingRef.current = false;
+      setPlaying(false);
+      setAudioHint(
+        "Sound is blocked. Unmute your phone (ring switch), then tap Play again.",
+      );
+      return;
+    }
+
+    const scheduleAhead = 0.15;
 
     while (
       playingRef.current &&
@@ -97,11 +126,28 @@ export function MetronomeApp() {
   }, []);
 
   const start = useCallback(async () => {
+    // Critical for iOS: unlock must begin in the same user-gesture stack
+    unlockAudioSync();
     const ctx = await ensureAudioReady();
-    playWoodblock({ volume: 0.001 }, ctx.currentTime);
+
+    if (ctx.state === "suspended") {
+      setAudioHint(
+        "Couldn't enable audio. Unmute your iPhone (side ring switch), then tap Play again.",
+      );
+      return;
+    }
+
+    setAudioHint(null);
+
+    // Audible warm-up click so user immediately hears sound on first play
+    playWoodblock(
+      { volume: Math.max(0.35, volumeRef.current), accent: true },
+      ctx.currentTime,
+    );
+
     beatIndexRef.current = 0;
     setBeat(0);
-    nextNoteTimeRef.current = ctx.currentTime + 0.05;
+    nextNoteTimeRef.current = ctx.currentTime + 60 / bpmRef.current;
 
     if (timerPreset > 0) {
       timerEndRef.current = performance.now() + timerPreset * 1000;
@@ -117,8 +163,12 @@ export function MetronomeApp() {
   }, [schedulerTick, timerPreset]);
 
   const toggle = useCallback(() => {
-    if (playing) stop();
-    else void start();
+    if (playing) {
+      stop();
+      return;
+    }
+    unlockAudioSync();
+    void start();
   }, [playing, start, stop]);
 
   useEffect(() => {
@@ -139,7 +189,10 @@ export function MetronomeApp() {
       if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
       e.preventDefault();
       if (playingRef.current) stop();
-      else void start();
+      else {
+        unlockAudioSync();
+        void start();
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -150,6 +203,16 @@ export function MetronomeApp() {
       playingRef.current = false;
       if (timerIdRef.current) window.clearTimeout(timerIdRef.current);
     };
+  }, []);
+
+  useEffect(() => {
+    const onVis = () => {
+      if (document.visibilityState === "visible" && getAudioState() === "running") {
+        setAudioHint(null);
+      }
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
   }, []);
 
   const selectTimer = (seconds: number) => {
@@ -170,7 +233,8 @@ export function MetronomeApp() {
     setBeat(0);
     setTimerPreset(0);
     setRemaining(0);
-    setVolume(0.8);
+    setVolume(0.9);
+    setAudioHint(null);
   };
 
   return (
@@ -193,6 +257,22 @@ export function MetronomeApp() {
           timer, and press play — or hit space.
         </p>
       </div>
+
+      {audioHint && (
+        <div
+          role="status"
+          style={{
+            marginTop: "1rem",
+            padding: "0.75rem 1rem",
+            borderRadius: "var(--radius-md, 10px)",
+            border: "1px solid color-mix(in oklab, var(--wood, #b07a3a) 40%, transparent)",
+            background: "color-mix(in oklab, var(--wood, #b07a3a) 12%, transparent)",
+            fontSize: "0.9rem",
+          }}
+        >
+          {audioHint}
+        </div>
+      )}
 
       <div className="card">
         <div className="string-line" />
@@ -310,7 +390,11 @@ export function MetronomeApp() {
               {playing ? "Stop" : "Play"}
             </button>
           </div>
-          <p className="hint">Spacebar toggles play / stop</p>
+          <p className="hint">
+            {playing
+              ? "Screen stays on while playing"
+              : "Tap Play to enable sound · screen stays on during practice"}
+          </p>
         </div>
       </div>
     </div>

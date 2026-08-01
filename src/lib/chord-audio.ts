@@ -1,17 +1,5 @@
 import { midiToFreq, type ResolvedChord } from "./music/theory";
-
-let ctx: AudioContext | null = null;
-
-function getCtx(): AudioContext {
-  if (!ctx) ctx = new AudioContext();
-  return ctx;
-}
-
-export async function ensureChordAudio(): Promise<AudioContext> {
-  const c = getCtx();
-  if (c.state === "suspended") await c.resume();
-  return c;
-}
+import { ensureAudioReady, unlockAudioSync } from "./woodblock";
 
 function pluck(
   audio: AudioContext,
@@ -30,12 +18,12 @@ function pluck(
   const filter = audio.createBiquadFilter();
   filter.type = "lowpass";
   filter.frequency.setValueAtTime(2200, when);
-  filter.frequency.exponentialRampToValueAtTime(800, when + duration * 0.6);
+  filter.frequency.linearRampToValueAtTime(800, when + duration * 0.6);
   const g = audio.createGain();
   g.gain.setValueAtTime(0.0001, when);
-  g.gain.exponentialRampToValueAtTime(gain, when + 0.01);
-  g.gain.exponentialRampToValueAtTime(gain * 0.35, when + 0.12);
-  g.gain.exponentialRampToValueAtTime(0.0001, when + duration);
+  g.gain.linearRampToValueAtTime(Math.max(0.0001, gain), when + 0.01);
+  g.gain.linearRampToValueAtTime(Math.max(0.0001, gain * 0.35), when + 0.12);
+  g.gain.linearRampToValueAtTime(0.0001, when + duration);
   const g2 = audio.createGain();
   g2.gain.value = 0.18;
   osc.connect(filter);
@@ -53,10 +41,11 @@ export async function playChord(
   chord: ResolvedChord,
   opts?: { duration?: number; volume?: number },
 ): Promise<void> {
-  const audio = await ensureChordAudio();
+  unlockAudioSync();
+  const audio = await ensureAudioReady();
   const when = audio.currentTime + 0.02;
   const duration = opts?.duration ?? 1.1;
-  const volume = opts?.volume ?? 0.22;
+  const volume = opts?.volume ?? 0.28;
   const notes = chord.midis.slice(0, 4);
   notes.forEach((midi, i) => {
     pluck(audio, midi, when + i * 0.012, duration, volume / Math.sqrt(notes.length));
@@ -67,9 +56,10 @@ export async function playProgression(
   chords: ResolvedChord[],
   opts?: { beatSec?: number; volume?: number; onStep?: (i: number) => void },
 ): Promise<() => void> {
-  const audio = await ensureChordAudio();
+  unlockAudioSync();
+  const audio = await ensureAudioReady();
   const beat = opts?.beatSec ?? 0.7;
-  const volume = opts?.volume ?? 0.22;
+  const volume = opts?.volume ?? 0.28;
   let cancelled = false;
   const start = audio.currentTime + 0.05;
 
