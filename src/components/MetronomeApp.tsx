@@ -5,7 +5,7 @@ import {
   playWoodblock,
   unlockAudioSync,
 } from "../lib/woodblock";
-import { attachWakeLock, stopWakeLock } from "../lib/wake-lock";
+import { keepAwake, releaseAwake } from "../lib/wake-lock";
 
 const BPM_MIN = 40;
 const BPM_MAX = 240;
@@ -55,18 +55,6 @@ export function MetronomeApp() {
     playingRef.current = playing;
   }, [playing]);
 
-  // Keep screen awake while playing (iPhone won't sleep mid-practice)
-  useEffect(() => {
-    const cleanup = attachWakeLock(playing);
-    return () => {
-      cleanup();
-      if (!playing) stopWakeLock();
-    };
-  }, [playing]);
-
-  useEffect(() => {
-    return () => stopWakeLock();
-  }, []);
 
   const schedulerTick = useCallback(async () => {
     const ctx = await ensureAudioReady();
@@ -90,6 +78,7 @@ export function MetronomeApp() {
         setPlaying(false);
         setRemaining(0);
         timerEndRef.current = null;
+        releaseAwake();
         break;
       }
 
@@ -119,6 +108,7 @@ export function MetronomeApp() {
   const stop = useCallback(() => {
     playingRef.current = false;
     setPlaying(false);
+    releaseAwake();
     if (timerIdRef.current) {
       window.clearTimeout(timerIdRef.current);
       timerIdRef.current = 0;
@@ -126,9 +116,12 @@ export function MetronomeApp() {
   }, []);
 
   const start = useCallback(async () => {
-    // Critical for iOS: unlock must begin in the same user-gesture stack
+    // Critical for iOS: audio + screen-awake both need the user-gesture stack
     unlockAudioSync();
+    void keepAwake(); // do not await first — start video/lock ASAP in gesture
     const ctx = await ensureAudioReady();
+    // Re-assert wake after async gap (iOS can drop locks across awaits)
+    void keepAwake();
 
     if (ctx.state === "suspended") {
       setAudioHint(
@@ -201,6 +194,7 @@ export function MetronomeApp() {
   useEffect(() => {
     return () => {
       playingRef.current = false;
+      releaseAwake();
       if (timerIdRef.current) window.clearTimeout(timerIdRef.current);
     };
   }, []);
@@ -392,8 +386,8 @@ export function MetronomeApp() {
           </div>
           <p className="hint">
             {playing
-              ? "Screen stays on while playing"
-              : "Tap Play to enable sound · screen stays on during practice"}
+              ? "Screen locked on · keep this tab open while you practice"
+              : "Tap Play to enable sound · keeps screen awake on iPhone"}
           </p>
         </div>
       </div>
