@@ -30,7 +30,10 @@ jobs:
       - name: Install dependencies
         run: npm install
       - name: Build
-        run: npm run build
+        run: |
+          npm run build
+          # SPA deep-link fallback for GitHub Pages
+          cp dist/index.html dist/404.html
       - name: Setup Pages
         uses: actions/configure-pages@v4
       - name: Upload artifact
