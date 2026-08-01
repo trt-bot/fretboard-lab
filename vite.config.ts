@@ -1,8 +1,8 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
-// Relative base for GitHub Pages (works under /fretboard-lab/ or custom domain)
+// Absolute project base so deep links (/metronome) resolve assets correctly
 export default defineConfig({
   plugins: [react()],
-  base: "./",
+  base: "/fretboard-lab/",
 });
