@@ -88,22 +88,19 @@ function ensureVideo(): HTMLVideoElement {
   return v;
 }
 
-async function startVideo(): Promise<boolean> {
+function startVideo(): void {
   try {
     const v = ensureVideo();
     v.muted = true;
-    // Some iOS builds need a currentTime nudge after play
+    // Fire-and-forget — never block the Play button
     const p = v.play();
     if (p && typeof (p as Promise<void>).then === "function") {
-      await p;
+      void p.catch(() => {
+        /* ignore autoplay rejection */
+      });
     }
-    // If still paused, retry once
-    if (v.paused) {
-      await v.play();
-    }
-    return !v.paused;
   } catch {
-    return false;
+    // ignore
   }
 }
 
@@ -163,9 +160,8 @@ async function releaseWakeLock(): Promise<void> {
 
 async function reacquire(): Promise<void> {
   if (!desired) return;
-  await acquireWakeLock();
-  // Always keep silent video running on iOS (Wake Lock alone is flaky in Chrome)
-  await startVideo();
+  void acquireWakeLock();
+  startVideo();
 }
 
 function attachListeners(): void {
@@ -186,20 +182,14 @@ function attachListeners(): void {
 
 /**
  * Call from the Play button handler (must be a user gesture on iOS).
+ * Never blocks — video play + wake lock run in background.
  */
-export async function keepAwake(): Promise<void> {
+export function keepAwake(): void {
   desired = true;
   attachListeners();
-
-  // Start both in the gesture stack — video first (sync-ish), then wake lock
-  const videoOk = startVideo();
-  const lockOk = acquireWakeLock();
-  await Promise.all([videoOk, lockOk]);
-
-  // Belt-and-suspenders: if lock failed or iOS, ensure video is playing
-  if (isLikelyIOS() || !sentinel || sentinel.released) {
-    await startVideo();
-  }
+  // Sync path: create video + call play() inside the gesture, no await
+  startVideo();
+  void acquireWakeLock();
 }
 
 /** Call on Stop / timer end / unmount */

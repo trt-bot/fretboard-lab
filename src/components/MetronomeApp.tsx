@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  ensureAudioReady,
+  ensureAudioReadyOnce,
+  getAudioContext,
   getAudioState,
   playWoodblock,
   unlockAudioSync,
@@ -55,19 +56,14 @@ export function MetronomeApp() {
     playingRef.current = playing;
   }, [playing]);
 
-
-  const schedulerTick = useCallback(async () => {
-    const ctx = await ensureAudioReady();
+  const schedulerTick = useCallback(() => {
+    // Never await here — keeps tempo tight and start snappy
+    const ctx = getAudioContext();
     if (ctx.state === "suspended") {
-      playingRef.current = false;
-      setPlaying(false);
-      setAudioHint(
-        "Sound is blocked. Unmute your phone (ring switch), then tap Play again.",
-      );
-      return;
+      void ctx.resume();
     }
 
-    const scheduleAhead = 0.15;
+    const scheduleAhead = 0.12;
 
     while (
       playingRef.current &&
@@ -99,9 +95,7 @@ export function MetronomeApp() {
     }
 
     if (playingRef.current) {
-      timerIdRef.current = window.setTimeout(() => {
-        void schedulerTick();
-      }, 25);
+      timerIdRef.current = window.setTimeout(schedulerTick, 25);
     }
   }, [beatsPerBar]);
 
@@ -115,32 +109,28 @@ export function MetronomeApp() {
     }
   }, []);
 
-  const start = useCallback(async () => {
-    // Critical for iOS: audio + screen-awake both need the user-gesture stack
-    unlockAudioSync();
-    void keepAwake(); // do not await first — start video/lock ASAP in gesture
-    const ctx = await ensureAudioReady();
-    // Re-assert wake after async gap (iOS can drop locks across awaits)
-    void keepAwake();
+  const start = useCallback(() => {
+    // Everything critical is synchronous so the first click is immediate.
+    const ctx = unlockAudioSync();
+    keepAwake();
+    void ensureAudioReadyOnce(); // background finish — do not await
 
-    if (ctx.state === "suspended") {
-      setAudioHint(
-        "Couldn't enable audio. Unmute your iPhone (side ring switch), then tap Play again.",
-      );
-      return;
-    }
-
+    // UI updates immediately
+    playingRef.current = true;
+    setPlaying(true);
     setAudioHint(null);
-
-    // Audible warm-up click so user immediately hears sound on first play
-    playWoodblock(
-      { volume: Math.max(0.35, volumeRef.current), accent: true },
-      ctx.currentTime,
-    );
-
     beatIndexRef.current = 0;
     setBeat(0);
-    nextNoteTimeRef.current = ctx.currentTime + 60 / bpmRef.current;
+
+    // First click NOW (tiny lead so scheduling is stable)
+    const t0 = ctx.currentTime + 0.02;
+    playWoodblock(
+      { volume: Math.max(0.35, volumeRef.current), accent: true },
+      t0,
+    );
+    // Second beat at one full interval after first
+    nextNoteTimeRef.current = t0 + 60 / bpmRef.current;
+    beatIndexRef.current = 1;
 
     if (timerPreset > 0) {
       timerEndRef.current = performance.now() + timerPreset * 1000;
@@ -150,19 +140,31 @@ export function MetronomeApp() {
       setRemaining(0);
     }
 
-    playingRef.current = true;
-    setPlaying(true);
-    void schedulerTick();
+    // Start scheduler right away
+    if (timerIdRef.current) {
+      window.clearTimeout(timerIdRef.current);
+      timerIdRef.current = 0;
+    }
+    schedulerTick();
+
+    // Soft check after a beat — if still suspended, show hint (don't block start)
+    window.setTimeout(() => {
+      if (!playingRef.current) return;
+      if (getAudioState() === "suspended") {
+        setAudioHint(
+          "Sound may be blocked. Unmute your iPhone (side ring switch), then tap Play again.",
+        );
+      }
+    }, 400);
   }, [schedulerTick, timerPreset]);
 
   const toggle = useCallback(() => {
-    if (playing) {
+    if (playingRef.current) {
       stop();
       return;
     }
-    unlockAudioSync();
-    void start();
-  }, [playing, start, stop]);
+    start();
+  }, [start, stop]);
 
   useEffect(() => {
     if (!playing || timerPreset <= 0) return;
@@ -182,10 +184,7 @@ export function MetronomeApp() {
       if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
       e.preventDefault();
       if (playingRef.current) stop();
-      else {
-        unlockAudioSync();
-        void start();
-      }
+      else start();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -387,7 +386,7 @@ export function MetronomeApp() {
           <p className="hint">
             {playing
               ? "Screen locked on · keep this tab open while you practice"
-              : "Tap Play to enable sound · keeps screen awake on iPhone"}
+              : "Tap Play — clicks start immediately · screen stays awake"}
           </p>
         </div>
       </div>

@@ -1,6 +1,6 @@
 /**
  * Synthesized woodblock via Web Audio — short noise burst + resonant body.
- * iOS Safari-safe: unlock on user gesture, webkit prefix, silent buffer unlock.
+ * iOS-safe unlock that never blocks Play on a hung promise.
  */
 
 type AudioContextConstructor = new (
@@ -21,11 +21,7 @@ function getAudioContextClass(): AudioContextConstructor {
 
 let sharedCtx: AudioContext | null = null;
 let unlocked = false;
-let keepAliveEl: HTMLAudioElement | null = null;
-
-/** Tiny silent WAV (1 sample) — unlocks iOS media pipeline */
-const SILENT_WAV =
-  "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=";
+let unlockInFlight: Promise<AudioContext> | null = null;
 
 function getCtx(): AudioContext {
   if (!sharedCtx) {
@@ -33,79 +29,39 @@ function getCtx(): AudioContext {
     try {
       sharedCtx = new AC({ latencyHint: "interactive" });
     } catch {
-      // Older webkit may not accept options object
       sharedCtx = new AC();
     }
   }
   return sharedCtx;
 }
 
-/**
- * Fully unlock iOS/Safari audio. Call from a direct user gesture (tap/click).
- * Must run as much as possible synchronously inside the gesture handler.
- */
-export async function ensureAudioReady(): Promise<AudioContext> {
-  const ctx = getCtx();
-
-  // 1) Resume AudioContext (required on iOS — often starts suspended)
-  if (ctx.state === "suspended") {
-    try {
-      await ctx.resume();
-    } catch {
-      // ignore — retry after silent unlock
-    }
-  }
-
-  // 2) Silent buffer through Web Audio (completes unlock on older iOS)
-  if (!unlocked) {
-    try {
-      const buffer = ctx.createBuffer(1, 1, ctx.sampleRate || 44100);
-      const source = ctx.createBufferSource();
-      source.buffer = buffer;
-      source.connect(ctx.destination);
-      source.start(0);
-    } catch {
-      // ignore
-    }
-
-    // 3) HTMLAudioElement unlock — critical for some iOS / in-app browsers
-    try {
-      if (!keepAliveEl) {
-        keepAliveEl = new Audio(SILENT_WAV);
-        keepAliveEl.loop = true;
-        keepAliveEl.volume = 0.001;
-        keepAliveEl.setAttribute("playsinline", "true");
-        keepAliveEl.setAttribute("webkit-playsinline", "true");
-      }
-      await keepAliveEl.play();
-    } catch {
-      // may still work with Web Audio alone
-    }
-
-    unlocked = true;
-  }
-
-  // 4) Resume again after unlock attempts
-  if (ctx.state === "suspended") {
-    try {
-      await ctx.resume();
-    } catch {
-      // leave for caller
-    }
-  }
-
-  return ctx;
+/** Race a promise so iOS media play/resume can never hang start forever. */
+function withTimeout<T>(p: Promise<T>, ms: number, fallback: T): Promise<T> {
+  return new Promise((resolve) => {
+    let done = false;
+    const t = window.setTimeout(() => {
+      if (done) return;
+      done = true;
+      resolve(fallback);
+    }, ms);
+    p.then(
+      (v) => {
+        if (done) return;
+        done = true;
+        window.clearTimeout(t);
+        resolve(v);
+      },
+      () => {
+        if (done) return;
+        done = true;
+        window.clearTimeout(t);
+        resolve(fallback);
+      },
+    );
+  });
 }
 
-/**
- * Synchronous best-effort unlock for the click call stack (iOS gesture chain).
- * Fire this first, then await ensureAudioReady() for the rest.
- */
-export function unlockAudioSync(): AudioContext {
-  const ctx = getCtx();
-  if (ctx.state === "suspended") {
-    void ctx.resume();
-  }
+function playSilentBuffer(ctx: AudioContext): void {
   try {
     const buffer = ctx.createBuffer(1, 1, ctx.sampleRate || 44100);
     const source = ctx.createBufferSource();
@@ -115,33 +71,58 @@ export function unlockAudioSync(): AudioContext {
   } catch {
     // ignore
   }
-  if (!keepAliveEl) {
-    try {
-      keepAliveEl = new Audio(SILENT_WAV);
-      keepAliveEl.loop = true;
-      keepAliveEl.volume = 0.001;
-      keepAliveEl.setAttribute("playsinline", "true");
-      keepAliveEl.setAttribute("webkit-playsinline", "true");
-      void keepAliveEl.play();
-    } catch {
-      // ignore
-    }
+}
+
+/**
+ * Synchronous unlock for the click/tap stack — call first, never await.
+ */
+export function unlockAudioSync(): AudioContext {
+  const ctx = getCtx();
+  if (ctx.state === "suspended") {
+    void ctx.resume();
   }
+  playSilentBuffer(ctx);
   return ctx;
 }
 
+/**
+ * Finish unlock without blocking. Safe to fire-and-forget after unlockAudioSync.
+ */
+export async function ensureAudioReady(): Promise<AudioContext> {
+  const ctx = getCtx();
+
+  if (ctx.state === "suspended") {
+    await withTimeout(ctx.resume().then(() => true), 250, false);
+  }
+
+  if (!unlocked) {
+    playSilentBuffer(ctx);
+    unlocked = true;
+  }
+
+  if (ctx.state === "suspended") {
+    await withTimeout(ctx.resume().then(() => true), 150, false);
+  }
+
+  return ctx;
+}
+
+/** Coalesce concurrent unlocks */
+export function ensureAudioReadyOnce(): Promise<AudioContext> {
+  if (!unlockInFlight) {
+    unlockInFlight = ensureAudioReady().finally(() => {
+      unlockInFlight = null;
+    });
+  }
+  return unlockInFlight;
+}
+
 export type WoodblockOpts = {
-  /** 0–1 overall volume */
   volume?: number;
-  /** Slight pitch variance for organic feel */
   detune?: number;
-  /** Accent beat (stronger hit) */
   accent?: boolean;
 };
 
-/**
- * Safe envelope helper — linear ramps (more reliable on iOS than exponential).
- */
 function hitEnvelope(
   g: GainNode,
   t: number,
@@ -156,30 +137,22 @@ function hitEnvelope(
   g.gain.linearRampToValueAtTime(0.0001, t + decay);
 }
 
-/**
- * Play a woodblock hit at `when` (AudioContext time). Defaults to now.
- * Louder defaults for phone speakers; master gain boosts mobile playback.
- */
 export function playWoodblock(opts: WoodblockOpts = {}, when?: number): void {
   const ctx = getCtx();
-  // If still suspended, hits are silent — bail early (caller should unlock)
   if (ctx.state === "suspended") {
     void ctx.resume();
   }
 
   const t = when ?? ctx.currentTime;
-  // Boost baseline so phone speakers cut through (user volume still scales)
   const vol = Math.min(1, (opts.volume ?? 0.85) * 1.15);
   const accent = opts.accent ?? false;
   const detune = opts.detune ?? Math.random() * 40 - 20;
   const gainScale = accent ? 1 : 0.72;
 
-  // Master bus — single path to destination (cleaner for iOS routing)
   const master = ctx.createGain();
   master.gain.value = 1.0;
   master.connect(ctx.destination);
 
-  // Noise burst (mallet impact)
   const noiseDur = 0.028;
   const noiseBuf = ctx.createBuffer(
     1,
@@ -208,7 +181,6 @@ export function playWoodblock(opts: WoodblockOpts = {}, when?: number): void {
   noise.start(t);
   noise.stop(t + noiseDur + 0.01);
 
-  // Resonant body — two closely spaced partials (hollow wood character)
   const partials: Array<{ freq: number; amp: number; decay: number }> = [
     { freq: 980 + detune, amp: 0.55, decay: 0.13 },
     { freq: 1480 + detune * 1.2, amp: 0.36, decay: 0.1 },
@@ -235,7 +207,6 @@ export function playWoodblock(opts: WoodblockOpts = {}, when?: number): void {
     osc.stop(t + p.decay + 0.02);
   }
 
-  // Very short formant click (edge of wood)
   const click = ctx.createOscillator();
   click.type = "triangle";
   click.frequency.value = 3200 + detune;
@@ -247,23 +218,19 @@ export function playWoodblock(opts: WoodblockOpts = {}, when?: number): void {
   click.stop(t + 0.03);
 }
 
+export function getAudioContext(): AudioContext {
+  return getCtx();
+}
+
 export function getAudioState(): AudioContextState | "none" {
   return sharedCtx?.state ?? "none";
 }
 
 export function closeAudio(): void {
-  if (keepAliveEl) {
-    try {
-      keepAliveEl.pause();
-      keepAliveEl.src = "";
-    } catch {
-      // ignore
-    }
-    keepAliveEl = null;
-  }
   if (sharedCtx) {
     void sharedCtx.close();
     sharedCtx = null;
   }
   unlocked = false;
+  unlockInFlight = null;
 }
