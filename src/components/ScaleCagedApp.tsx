@@ -27,7 +27,8 @@ import {
 import { midiAt, STRING_LABELS } from "../lib/music/fretboard";
 import { playSequence, playMidiNote } from "../lib/chord-audio";
 import { unlockAudioSync } from "../lib/woodblock";
-import { Fretboard, type FretMark } from "./Fretboard";
+import type { FretMark } from "./Fretboard";
+import { AcousticFretboard } from "./AcousticFretboard";
 
 type Tab = "scales" | "caged";
 
@@ -75,19 +76,20 @@ export function ScaleCagedApp() {
   );
 
   const scaleMarks: FretMark[] = useMemo(() => {
-    return patternDots.map((d) => ({
-      string: d.string,
-      fret: d.fret,
-      kind: d.isRoot ? "root" : "scale",
-      label: d.isRoot ? "R" : String(d.degree),
-    }));
+    return patternDots
+      .filter((d) => d.fret >= 0 && d.fret <= 12)
+      .map((d) => ({
+        string: d.string,
+        fret: d.fret,
+        kind: (d.isRoot ? "root" : "scale") as FretMark["kind"],
+        label: d.isRoot ? "R" : String(d.degree),
+      }));
   }, [patternDots]);
 
   const sequenceMidis = useMemo(() => {
-    // Play low→high: primarily by pitch
-    const sorted = [...patternDots].sort(
-      (a, b) => midiAt(a.string, a.fret) - midiAt(b.string, b.fret),
-    );
+    const sorted = [...patternDots]
+      .filter((d) => d.fret >= 0 && d.fret <= 12)
+      .sort((a, b) => midiAt(a.string, a.fret) - midiAt(b.string, b.fret));
     return sorted.map((d) => midiAt(d.string, d.fret));
   }, [patternDots]);
 
@@ -126,12 +128,14 @@ export function ScaleCagedApp() {
 
   const cagedMarks: FretMark[] = useMemo(() => {
     if (!placed) return [];
-    return placed.placed.map((p) => ({
-      string: p.string,
-      fret: p.absFret,
-      kind: p.root ? "root" : "chord",
-      label: p.root ? "R" : p.finger && p.finger > 0 ? String(p.finger) : "·",
-    }));
+    return placed.placed
+      .filter((p) => p.absFret >= 0 && p.absFret <= 12)
+      .map((p) => ({
+        string: p.string,
+        fret: p.absFret,
+        kind: (p.root ? "root" : "chord") as FretMark["kind"],
+        label: p.root ? "R" : p.finger && p.finger > 0 ? String(p.finger) : "·",
+      }));
   }, [placed]);
 
   const hearChord = () => {
@@ -271,11 +275,10 @@ export function ScaleCagedApp() {
               </p>
             </section>
 
-            <Fretboard
-              frets={Math.max(12, pattern.fretEnd)}
+            <AcousticFretboard
               marks={scaleMarks}
-              windowStart={pattern.fretStart}
-              windowEnd={pattern.fretEnd}
+              windowStart={Math.min(12, Math.max(0, pattern.fretStart))}
+              windowEnd={Math.min(12, Math.max(0, pattern.fretEnd))}
               footer={
                 <p className="fret-legend">
                   <span className="leg root">R</span> root · numbers are scale
@@ -376,8 +379,7 @@ export function ScaleCagedApp() {
               </div>
             </section>
 
-            <Fretboard
-              frets={15}
+            <AcousticFretboard
               marks={cagedMarks}
               footer={
                 <p className="fret-legend">

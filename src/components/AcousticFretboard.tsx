@@ -1,22 +1,21 @@
-import { useMemo, type CSSProperties } from "react";
+import { useMemo, type CSSProperties, type ReactNode } from "react";
 import { FRET_MAX, STRING_COUNT, STRING_LABELS } from "../lib/music/fretboard";
 import type { FretMark } from "./Fretboard";
 
 /**
- * Precision SVG fretboard for Note Lab.
- * Geometry mirrors public/fretboard-hd.svg (viewBox 1200×320).
+ * Precision SVG fretboard (shared by Note Lab + Scale & CAGED Lab).
+ * Geometry mirrors public/fretboard-hd.svg (viewBox 1200×320), frets 0–12.
  */
 const IMG = `${import.meta.env.BASE_URL}fretboard-hd.svg`;
 
-// SVG layout constants (must match fretboard-hd.svg)
 const VB_W = 1200;
 const VB_H = 320;
-const BOARD_X0 = 48; // left of nut
-const BOARD_X1 = 1152; // end of board
+const BOARD_X0 = 48;
+const BOARD_X1 = 1152;
 const NUT_W = 14;
-const PLAY_X0 = BOARD_X0 + NUT_W; // 62 — start of open/fret spaces after nut face
+const PLAY_X0 = BOARD_X0 + NUT_W;
 const PLAY_X1 = BOARD_X1;
-/** 12-TET fret wire x positions in viewBox units (0 = nut face, 12 = 12th wire). */
+
 function fretWireXs(frets: number): number[] {
   const span = PLAY_X1 - PLAY_X0;
   const raw: number[] = [0];
@@ -27,7 +26,6 @@ function fretWireXs(frets: number): number[] {
   return raw.map((p) => PLAY_X0 + (p / scale) * span);
 }
 
-/** Left edge + width of fret cell in % of viewBox. */
 function cellXRange(wires: number[], fret: number): { leftPct: number; widthPct: number } {
   let x0: number;
   let x1: number;
@@ -35,13 +33,9 @@ function cellXRange(wires: number[], fret: number): { leftPct: number; widthPct:
     x0 = BOARD_X0;
     x1 = wires[1]!;
   } else {
-    x0 = wires[fret]!; // finger behind the fret wire toward nut... 
-    // Standard UI: fretted note N occupies space BETWEEN wire N-1 and wire N
-    // (you press in that space). Open is nut→wire1.
     x0 = wires[fret - 1]!;
     x1 = wires[fret]!;
   }
-  // slight inset so dots sit in the cell
   const pad = (x1 - x0) * 0.04;
   return {
     leftPct: ((x0 + pad) / VB_W) * 100,
@@ -50,18 +44,23 @@ function cellXRange(wires: number[], fret: number): { leftPct: number; widthPct:
 }
 
 function stringCenterY(displayRow: number): number {
-  // SVG strings: high e at top — 6 strings from y≈70 to y≈230
   const yTop = 70;
   const yBot = 230;
   return yTop + displayRow * ((yBot - yTop) / (STRING_COUNT - 1));
 }
 
 type Props = {
+  /** Always capped at 12 — SVG neck is frets 0–12 */
   frets?: number;
   marks?: FretMark[];
   onCellClick?: (string: number, fret: number) => void;
   interactive?: boolean;
+  /** Dim frets outside this inclusive window (scale pattern highlight) */
+  windowStart?: number;
+  windowEnd?: number;
   className?: string;
+  footer?: ReactNode;
+  caption?: string;
 };
 
 export function AcousticFretboard({
@@ -69,15 +68,24 @@ export function AcousticFretboard({
   marks = [],
   onCellClick,
   interactive = false,
+  windowStart,
+  windowEnd,
   className = "",
+  footer,
+  caption,
 }: Props) {
-  const wires = useMemo(() => fretWireXs(frets), [frets]);
+  // SVG only has frets 0–12
+  const fretCount = Math.min(FRET_MAX, Math.max(1, frets));
+  const wires = useMemo(() => fretWireXs(fretCount), [fretCount]);
 
   const markMap = useMemo(() => {
     const m = new Map<string, FretMark>();
-    for (const mark of marks) m.set(`${mark.string}-${mark.fret}`, mark);
+    for (const mark of marks) {
+      if (mark.fret < 0 || mark.fret > fretCount) continue;
+      m.set(`${mark.string}-${mark.fret}`, mark);
+    }
     return m;
-  }, [marks]);
+  }, [marks, fretCount]);
 
   return (
     <div className={`acoustic-fb ${className}`}>
@@ -89,18 +97,48 @@ export function AcousticFretboard({
           draggable={false}
         />
 
+        {/* Optional pattern window veil */}
+        {windowStart !== undefined && windowEnd !== undefined && (
+          <div className="acoustic-fb-window-veil" aria-hidden>
+            {windowStart > 0 && (
+              <div
+                className="acoustic-fb-veil"
+                style={{
+                  left: "0%",
+                  width: `${cellXRange(wires, windowStart).leftPct}%`,
+                }}
+              />
+            )}
+            {windowEnd < fretCount && (
+              <div
+                className="acoustic-fb-veil"
+                style={{
+                  left: `${
+                    cellXRange(wires, windowEnd).leftPct +
+                    cellXRange(wires, windowEnd).widthPct
+                  }%`,
+                  right: "0%",
+                }}
+              />
+            )}
+          </div>
+        )}
+
         <div className="acoustic-fb-grid" role="grid" aria-label="Fretboard notes">
           {Array.from({ length: STRING_COUNT }, (_, stringIndex) => {
-            // stringIndex 0 = low E (bottom), 5 = high e (top)
             const displayRow = STRING_COUNT - 1 - stringIndex;
             const cy = stringCenterY(displayRow);
             const rowH = ((230 - 70) / (STRING_COUNT - 1)) * 0.92;
             const topPct = ((cy - rowH / 2) / VB_H) * 100;
             const heightPct = (rowH / VB_H) * 100;
 
-            return Array.from({ length: frets + 1 }, (_, fret) => {
+            return Array.from({ length: fretCount + 1 }, (_, fret) => {
               const mark = markMap.get(`${stringIndex}-${fret}`);
               const { leftPct, widthPct } = cellXRange(wires, fret);
+              const inWindow =
+                windowStart === undefined ||
+                windowEnd === undefined ||
+                (fret >= windowStart && fret <= windowEnd);
               const style: CSSProperties = {
                 left: `${leftPct}%`,
                 top: `${topPct}%`,
@@ -116,6 +154,7 @@ export function AcousticFretboard({
                     "acoustic-fb-cell",
                     interactive ? "is-interactive" : "",
                     mark ? `is-mark mark-${mark.kind ?? "scale"}` : "",
+                    !inWindow ? "is-dim" : "",
                   ]
                     .filter(Boolean)
                     .join(" ")}
@@ -139,8 +178,10 @@ export function AcousticFretboard({
           })}
         </div>
       </div>
+      {footer}
       <p className="acoustic-fb-caption">
-        Precision neck · frets 0–{frets} · low E at the bottom · nut on the left
+        {caption ??
+          `Precision neck · frets 0–${fretCount} · low E at the bottom · nut on the left`}
       </p>
     </div>
   );

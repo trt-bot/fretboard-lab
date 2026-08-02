@@ -1452,6 +1452,30 @@ a {
   background: color-mix(in oklab, var(--wood) 22%, transparent);
   border-radius: 2px;
 }
+
+.acoustic-fb-window-veil {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+.acoustic-fb-veil {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: color-mix(in oklab, #0c0a09 48%, transparent);
+}
+.acoustic-fb-cell.is-dim .acoustic-fb-dot {
+  opacity: 0.28;
+  filter: grayscale(0.4);
+}
+.acoustic-fb-cell.is-dim {
+  opacity: 0.55;
+}
+.acoustic-fb .fret-legend {
+  margin: 0.55rem 0 0;
+}
+
 .acoustic-fb-caption {
   margin: 0.55rem 0 0;
   font-size: 0.75rem;
