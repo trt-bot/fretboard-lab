@@ -4,6 +4,7 @@ import { MetronomePage } from "./pages/MetronomePage";
 import { ProgressionsPage } from "./pages/ProgressionsPage";
 import { NoteLabPage } from "./pages/NoteLabPage";
 import { ScaleCagedPage } from "./pages/ScaleCagedPage";
+import { SingLabPage } from "./pages/SingLabPage";
 
 function GuitarMark() {
   return (
@@ -49,6 +50,7 @@ export function App() {
             <NavLink to="/progressions">Harmony</NavLink>
             <NavLink to="/notes">Notes</NavLink>
             <NavLink to="/scales">Scales</NavLink>
+            <NavLink to="/sing">Sing</NavLink>
           </nav>
         </div>
       </header>
@@ -60,13 +62,14 @@ export function App() {
           <Route path="/progressions" element={<ProgressionsPage />} />
           <Route path="/notes" element={<NoteLabPage />} />
           <Route path="/scales" element={<ScaleCagedPage />} />
+          <Route path="/sing" element={<SingLabPage />} />
         </Routes>
       </main>
 
       <footer className="site-footer">
         <div className="site-footer-inner">
           <p>Fretboard Lab — practice tools for intermediate guitar</p>
-          <p className="small">Hear · Time · Harmony · Fretboard · Lines</p>
+          <p className="small">Hear · Time · Harmony · Fretboard · Lines · Voice</p>
         </div>
       </footer>
     </div>

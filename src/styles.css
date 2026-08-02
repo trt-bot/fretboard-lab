@@ -1514,6 +1514,187 @@ a {
   letter-spacing: 0.02em;
   line-height: 1.1;
 }
+
+/* —— Sing Lab —— */
+.sing-target-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding: 1rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+}
+.sing-target-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.sing-target-note {
+  display: flex;
+  align-items: baseline;
+  gap: 0.65rem;
+}
+.sing-deg {
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  color: var(--subtle);
+  min-width: 1.75rem;
+}
+.sing-name {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 6vw, 2.75rem);
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  color: var(--wood-bright);
+  line-height: 1;
+}
+.sing-hz {
+  font-size: 0.8rem;
+  color: var(--subtle);
+  font-family: var(--font-mono);
+}
+.sing-seq {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+.sing-seq-chip {
+  appearance: none;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--muted);
+  border-radius: var(--radius-md);
+  padding: 0.35rem 0.55rem;
+  min-width: 2.6rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.05rem;
+  font: inherit;
+}
+.sing-seq-chip .deg {
+  font-size: 0.65rem;
+  font-family: var(--font-mono);
+  color: var(--subtle);
+}
+.sing-seq-chip .nm {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.sing-seq-chip.active {
+  border-color: color-mix(in oklab, var(--wood) 55%, var(--border));
+  background: color-mix(in oklab, var(--wood) 22%, var(--surface));
+  color: var(--wood-bright);
+}
+.sing-seq-chip.done {
+  opacity: 0.55;
+}
+.pitch-meter-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  padding: 1rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+}
+.pitch-status {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.pitch-status.ok { color: #6ee7a8; }
+.pitch-status.near { color: var(--wood-bright); }
+.pitch-status.off { color: #f0a090; }
+.pitch-meter {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+.pitch-scale {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.7rem;
+  color: var(--subtle);
+  font-family: var(--font-mono);
+}
+.pitch-track {
+  position: relative;
+  height: 2.75rem;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  overflow: hidden;
+}
+.pitch-zone.near {
+  position: absolute;
+  left: 20%;
+  right: 20%;
+  top: 0;
+  bottom: 0;
+  background: color-mix(in oklab, var(--wood) 12%, transparent);
+}
+.pitch-zone.ok {
+  position: absolute;
+  left: 35%;
+  right: 35%;
+  top: 0;
+  bottom: 0;
+  background: color-mix(in oklab, #6ee7a8 14%, transparent);
+}
+.pitch-center {
+  position: absolute;
+  left: 50%;
+  top: 15%;
+  bottom: 15%;
+  width: 2px;
+  margin-left: -1px;
+  background: color-mix(in oklab, var(--fg) 35%, transparent);
+}
+.pitch-needle {
+  position: absolute;
+  top: 10%;
+  bottom: 10%;
+  width: 4px;
+  margin-left: -2px;
+  border-radius: 999px;
+  background: var(--muted);
+  box-shadow: 0 0 10px color-mix(in oklab, #000 40%, transparent);
+  transition: left 60ms linear, background var(--motion-quick) var(--ease);
+}
+.pitch-needle.idle { opacity: 0.35; }
+.pitch-needle.ok { background: #6ee7a8; }
+.pitch-needle.near { background: var(--wood-bright); }
+.pitch-needle.off { background: #f0a090; }
+.pitch-readout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  font-size: 0.85rem;
+}
+.pitch-readout strong {
+  display: block;
+  font-weight: 500;
+  color: var(--fg);
+  font-variant-numeric: tabular-nums;
+}
+.pitch-k {
+  display: block;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--subtle);
+  margin-bottom: 0.15rem;
+}
+.sing-transport {
+  flex-wrap: wrap;
+}
+@media (max-width: 639px) {
+  .pitch-readout { grid-template-columns: 1fr; gap: 0.4rem; }
+  .sing-transport .btn-lg { width: 100%; }
+}
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

@@ -60,7 +60,16 @@ const apps: AppCard[] = [
     tags: ["Scales", "CAGED"],
     to: "/scales",
   },
-];
+  {
+    id: "sing",
+    pillar: "Voice",
+    title: "Sing Lab",
+    description:
+      "Sing scales and arpeggios over a guitar chord. Live pitch meter shows how close you are to each target note.",
+    tags: ["Singing", "Pitch"],
+    to: "/sing",
+  },
+]
 
 export function HomePage() {
   return (
@@ -75,8 +84,7 @@ export function HomePage() {
         </p>
         <div className="hero-rule" aria-hidden />
         <p className="practice-path">
-          <strong>Simple path:</strong> 5 min Note Lab → 5 min Scale box → loop a
-          progression at 80 BPM → push the metronome.
+          <strong>Simple path:</strong> Note Lab → Scale pattern → Sing Lab over a chord → loop a progression.
         </p>
       </section>
 
