@@ -1302,6 +1302,151 @@ a {
   .chord-strip { gap: 0.4rem; }
 }
 
+
+/* —— Photo acoustic fretboard (Note Lab) —— */
+.acoustic-fb {
+  width: 100%;
+}
+.acoustic-fb-frame {
+  position: relative;
+  width: 100%;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--border-strong);
+  background: #1a1410;
+  box-shadow: var(--shadow-panel);
+  aspect-ratio: 3 / 2;
+  max-height: min(52vh, 420px);
+}
+.acoustic-fb-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 48%;
+  user-select: none;
+  pointer-events: none;
+}
+.acoustic-fb-grid {
+  position: absolute;
+  inset: 0;
+}
+.acoustic-fb-cell {
+  position: absolute;
+  appearance: none;
+  border: none;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  place-items: center;
+  z-index: 2;
+}
+.acoustic-fb-cell.is-interactive {
+  cursor: pointer;
+}
+.acoustic-fb-cell.is-interactive:hover {
+  background: color-mix(in oklab, var(--wood) 18%, transparent);
+}
+.acoustic-fb-cell.is-interactive:active {
+  background: color-mix(in oklab, var(--wood) 28%, transparent);
+}
+.acoustic-fb-cell:disabled {
+  cursor: default;
+}
+.acoustic-fb-dot {
+  width: clamp(1.1rem, 2.4vw, 1.55rem);
+  height: clamp(1.1rem, 2.4vw, 1.55rem);
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: color-mix(in oklab, var(--wood) 75%, #1c1917);
+  border: 2px solid color-mix(in oklab, #fff 55%, var(--wood));
+  box-shadow:
+    0 0 0 1px color-mix(in oklab, #000 50%, transparent),
+    0 2px 8px color-mix(in oklab, #000 45%, transparent);
+  color: var(--accent-fg);
+}
+.mark-target .acoustic-fb-dot {
+  background: color-mix(in oklab, var(--bg) 40%, transparent);
+  border: 2px dashed var(--wood-bright);
+  color: var(--wood-bright);
+  box-shadow: 0 0 12px color-mix(in oklab, var(--wood) 40%, transparent);
+}
+.mark-correct .acoustic-fb-dot {
+  background: #2f6f4e;
+  border-color: #6ee7a8;
+  color: #ecfdf5;
+}
+.mark-wrong .acoustic-fb-dot {
+  background: color-mix(in oklab, var(--danger) 70%, #1c1917);
+  border-color: #f0a090;
+  color: #fff;
+}
+.mark-root .acoustic-fb-dot {
+  background: var(--wood-bright);
+  border-color: #fff;
+}
+.acoustic-fb-dot-label {
+  font-family: var(--font-mono);
+  font-size: clamp(0.55rem, 1.4vw, 0.72rem);
+  font-weight: 700;
+  line-height: 1;
+}
+.acoustic-fb-string-labels {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+.acoustic-fb-slabel {
+  position: absolute;
+  left: 0.35rem;
+  display: grid;
+  place-items: center;
+  min-width: 1.1rem;
+  padding: 0 0.2rem;
+  border-radius: 0.25rem;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: #f5f0e8;
+  background: color-mix(in oklab, #000 45%, transparent);
+  text-shadow: 0 1px 2px #000;
+}
+.acoustic-fb-fret-nums {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0.2rem;
+  height: 1rem;
+  pointer-events: none;
+  z-index: 1;
+}
+.acoustic-fb-fnum {
+  position: absolute;
+  bottom: 0;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  font-weight: 600;
+  color: color-mix(in oklab, #fff 80%, transparent);
+  text-shadow: 0 1px 2px #000;
+}
+.acoustic-fb-caption {
+  margin: 0.55rem 0 0;
+  font-size: 0.75rem;
+  color: var(--subtle);
+  text-align: center;
+}
+
+@media (max-width: 639px) {
+  .acoustic-fb-frame {
+    max-height: min(42vh, 320px);
+    aspect-ratio: 16 / 11;
+  }
+  .acoustic-fb-slabel { font-size: 0.55rem; left: 0.2rem; }
+}
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

@@ -9,7 +9,8 @@ import {
 import { NOTE_NAMES_SHARP, pcToName } from "../lib/music/theory";
 import { playFretNote } from "../lib/chord-audio";
 import { unlockAudioSync } from "../lib/woodblock";
-import { Fretboard, type FretMark } from "./Fretboard";
+import type { FretMark } from "./Fretboard";
+import { AcousticFretboard } from "./AcousticFretboard";
 
 type Mode = "find" | "name";
 
@@ -205,7 +206,7 @@ export function NoteLabApp() {
             )}
           </div>
 
-          <Fretboard
+          <AcousticFretboard
             marks={marks}
             interactive={prompt.mode === "find"}
             onCellClick={(s, f) => void onCell(s, f)}
