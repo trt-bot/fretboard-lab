@@ -2,6 +2,8 @@ import { NavLink, Route, Routes } from "react-router-dom";
 import { HomePage } from "./pages/HomePage";
 import { MetronomePage } from "./pages/MetronomePage";
 import { ProgressionsPage } from "./pages/ProgressionsPage";
+import { NoteLabPage } from "./pages/NoteLabPage";
+import { ScaleCagedPage } from "./pages/ScaleCagedPage";
 
 function GuitarMark() {
   return (
@@ -34,17 +36,19 @@ export function App() {
             <span className="brand-mark">
               <GuitarMark />
             </span>
-            <span>
+            <span className="brand-text">
               <div className="brand-title">Fretboard Lab</div>
-              <div className="brand-sub">Guitar practice apps</div>
+              <div className="brand-sub">Intermediate guitar practice</div>
             </span>
           </NavLink>
           <nav className="nav" aria-label="Main">
             <NavLink to="/" end>
-              Workshop
+              Lab
             </NavLink>
-            <NavLink to="/metronome">Metronome</NavLink>
-            <NavLink to="/progressions">Progressions</NavLink>
+            <NavLink to="/metronome">Time</NavLink>
+            <NavLink to="/progressions">Harmony</NavLink>
+            <NavLink to="/notes">Notes</NavLink>
+            <NavLink to="/scales">Scales</NavLink>
           </nav>
         </div>
       </header>
@@ -54,13 +58,15 @@ export function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/metronome" element={<MetronomePage />} />
           <Route path="/progressions" element={<ProgressionsPage />} />
+          <Route path="/notes" element={<NoteLabPage />} />
+          <Route path="/scales" element={<ScaleCagedPage />} />
         </Routes>
       </main>
 
       <footer className="site-footer">
         <div className="site-footer-inner">
-          <p>Fretboard Lab — a home for guitar practice tools</p>
-          <p className="small">Built for players who practice with intention</p>
+          <p>Fretboard Lab — practice tools for intermediate guitar</p>
+          <p className="small">Hear · Time · Harmony · Fretboard · Lines</p>
         </div>
       </footer>
     </div>

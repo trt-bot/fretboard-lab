@@ -16,6 +16,9 @@ import {
   type ResolvedChord,
 } from "../lib/music/theory";
 import { playChord, playProgression } from "../lib/chord-audio";
+import { unlockAudioSync } from "../lib/woodblock";
+
+const GUITAR_KEYS: KeyId[] = ["G", "A", "D", "C", "E", "Am", "Em", "Dm"];
 
 export function ProgressionExplorer() {
   const [genreId, setGenreId] = useState<GenreId>("bluegrass");
@@ -25,6 +28,10 @@ export function ProgressionExplorer() {
   const [activeStep, setActiveStep] = useState<number | null>(null);
   const [playing, setPlaying] = useState(false);
   const [selectedChord, setSelectedChord] = useState<number | null>(null);
+  const [bpm, setBpm] = useState(100);
+  const [loop, setLoop] = useState(true);
+  const [countIn, setCountIn] = useState(true);
+  const [capo, setCapo] = useState(0);
   const cancelRef = useRef<(() => void) | null>(null);
 
   const progression: Progression = useMemo(
@@ -69,10 +76,14 @@ export function ProgressionExplorer() {
       stopPlayback();
       return;
     }
+    unlockAudioSync();
     setPlaying(true);
     setSelectedChord(null);
+    const beatSec = 60 / bpm;
     const cancel = await playProgression(chords, {
-      beatSec: 0.75,
+      beatSec,
+      loop,
+      countIn,
       onStep: (i) => {
         if (i < 0) {
           setPlaying(false);
@@ -102,24 +113,26 @@ export function ProgressionExplorer() {
         ? chords[activeStep]
         : chords[0];
 
+  const shapeHint = focusChord ? guitarShapeHint(focusChord.name) : null;
+
+  // Capo: shapes key is what you finger; sounding is shapes + capo
+  // If user fingers `key` with capo N, sounding is up N semitones.
+  // Display: "Finger in {key}; sounding ~ {sounding}"
+  // And reverse: want sounding key with capo → play shapes in lowered key
+  const soundingBlurb = useMemo(() => {
+    if (capo === 0) return `No capo — sounding key is ${key}.`;
+    // crude sounding label via shifting root name is enough for majors
+    return `Capo ${capo}: finger shapes as if in ${key}; pitch sounds ${capo} frets higher.`;
+  }, [capo, key]);
+
   return (
-    <div className="prog-page">
+    <div className="tool-page prog-page">
       <div>
-        <span className="badge badge-wood">Practice tool</span>
-        <h1
-          style={{
-            margin: "0.75rem 0 0",
-            fontFamily: "var(--font-display)",
-            fontSize: "clamp(1.75rem, 4vw, 2.25rem)",
-            fontWeight: 500,
-            letterSpacing: "-0.03em",
-          }}
-        >
-          Chord Progression Explorer
-        </h1>
-        <p style={{ margin: "0.75rem 0 0", color: "var(--muted)", maxWidth: "40rem" }}>
-          Browse genre vocabularies, transpose to guitar-friendly keys, hear
-          changes, and dig into the theory — including a songwriter toolkit.
+        <span className="badge badge-wood">Harmony</span>
+        <h1 className="tool-title">Chord Progression Explorer</h1>
+        <p className="tool-lede">
+          Genre vocabularies, guitar-friendly keys, hear the changes, loop a
+          practice tempo — then dig into why it works.
         </p>
       </div>
 
@@ -140,12 +153,10 @@ export function ProgressionExplorer() {
 
       <div className="card">
         <div className="card-header">
-          <h2 className="card-title" style={{ fontSize: "1.5rem" }}>
+          <h2 className="card-title" style={{ fontSize: "1.35rem" }}>
             {genre.label}
           </h2>
-          <p className="card-desc" style={{ fontSize: "1rem" }}>
-            {genre.description}
-          </p>
+          <p className="card-desc">{genre.description}</p>
         </div>
         <div className="card-body">
           <div className="hallmarks">
@@ -159,10 +170,22 @@ export function ProgressionExplorer() {
       </div>
 
       <div className="prog-layout">
-        <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+        <div className="tool-stack">
           <section className="key-section">
             <h2>Key</h2>
-            <p className="key-label">Major</p>
+            <div className="chip-row wrap" style={{ marginBottom: "0.75rem" }}>
+              {GUITAR_KEYS.map((k) => (
+                <button
+                  key={k}
+                  type="button"
+                  className={key === k ? "chip active" : "chip"}
+                  onClick={() => onKeyChange(k)}
+                >
+                  {k}
+                </button>
+              ))}
+            </div>
+            <p className="key-label">All major</p>
             <div className="key-chips">
               {MAJOR_KEYS.map((k) => (
                 <button
@@ -175,7 +198,7 @@ export function ProgressionExplorer() {
                 </button>
               ))}
             </div>
-            <p className="key-label">Minor</p>
+            <p className="key-label">All minor</p>
             <div className="key-chips">
               {MINOR_KEYS.map((k) => (
                 <button
@@ -210,11 +233,11 @@ export function ProgressionExplorer() {
           </section>
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+        <div className="tool-stack">
           <div className="card">
             <div className="string-line" />
             <div className="card-header">
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", marginBottom: "0.5rem" }}>
+              <div className="chip-row wrap" style={{ marginBottom: "0.5rem" }}>
                 <span className="badge badge-outline">{key}</span>
                 {progression.tags?.map((t) => (
                   <span key={t} className="badge badge-solid">
@@ -225,7 +248,7 @@ export function ProgressionExplorer() {
               <h3 className="card-title">{progression.name}</h3>
               <p className="card-desc">{progression.summary}</p>
             </div>
-            <div className="card-body">
+            <div className="card-body tool-stack">
               <div className="chord-strip">
                 {chords.map((c, i) => (
                   <button
@@ -243,13 +266,75 @@ export function ProgressionExplorer() {
                 ))}
               </div>
 
-              <div style={{ marginTop: "1.25rem", display: "flex", flexWrap: "wrap", gap: "0.5rem", alignItems: "center" }}>
-                <button type="button" className="btn btn-primary" onClick={() => void hearProgression()}>
-                  {playing ? "Stop" : "Play progression"}
-                </button>
-                <span style={{ fontSize: "0.75rem", color: "var(--subtle)" }}>
-                  Tap a chord to hear it alone
-                </span>
+              <div className="playback-panel">
+                <div className="control-row">
+                  <h3>Tempo</h3>
+                  <span className="mono-stat">{bpm} BPM</span>
+                </div>
+                <input
+                  className="slider"
+                  type="range"
+                  min={60}
+                  max={160}
+                  step={1}
+                  value={bpm}
+                  onChange={(e) => {
+                    stopPlayback();
+                    setBpm(Number(e.target.value));
+                  }}
+                  aria-label="Playback tempo"
+                />
+                <div className="check-row-group">
+                  <label className="check-row">
+                    <input
+                      type="checkbox"
+                      checked={loop}
+                      onChange={(e) => {
+                        stopPlayback();
+                        setLoop(e.target.checked);
+                      }}
+                    />
+                    Loop
+                  </label>
+                  <label className="check-row">
+                    <input
+                      type="checkbox"
+                      checked={countIn}
+                      onChange={(e) => {
+                        stopPlayback();
+                        setCountIn(e.target.checked);
+                      }}
+                    />
+                    Count-in (1 bar)
+                  </label>
+                </div>
+                <div className="control-row">
+                  <h3>Capo</h3>
+                  <span className="mono-stat">{capo === 0 ? "Off" : `Fret ${capo}`}</span>
+                </div>
+                <input
+                  className="slider"
+                  type="range"
+                  min={0}
+                  max={7}
+                  step={1}
+                  value={capo}
+                  onChange={(e) => setCapo(Number(e.target.value))}
+                  aria-label="Capo fret"
+                />
+                <p className="hint" style={{ textAlign: "left", margin: 0 }}>
+                  {soundingBlurb}
+                </p>
+                <div className="transport">
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-lg"
+                    onClick={() => void hearProgression()}
+                  >
+                    {playing ? "Stop" : "Play progression"}
+                  </button>
+                </div>
+                <p className="hint">Tap a chord chip to hear it alone</p>
               </div>
 
               <div className="info-grid">
@@ -277,20 +362,26 @@ export function ProgressionExplorer() {
                 </p>
               </div>
               <div className="card-body">
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", marginBottom: "0.75rem" }}>
+                <div className="chip-row wrap" style={{ marginBottom: "0.75rem" }}>
                   <span className="badge badge-wood">
                     {FUNCTION_LABEL[focusChord.functionHint]}
                   </span>
                   <span className="badge badge-outline">{focusChord.quality}</span>
-                  {guitarShapeHint(focusChord.name) && (
-                    <span className="badge badge-solid">
-                      Shape {guitarShapeHint(focusChord.name)}
-                    </span>
+                  {shapeHint && (
+                    <span className="badge badge-solid">Shape {shapeHint}</span>
                   )}
                 </div>
                 <p style={{ margin: 0, fontSize: "0.875rem", color: "var(--muted)" }}>
                   {FUNCTION_BLURB[focusChord.functionHint]}
                 </p>
+                {shapeHint && (
+                  <div className="shape-diagram" aria-label="Chord shape hint">
+                    <span className="shape-tab">{shapeHint}</span>
+                    <span className="hint" style={{ margin: 0 }}>
+                      Tab left→right is low E→high e (x = mute)
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
           )}

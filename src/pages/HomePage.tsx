@@ -2,80 +2,101 @@ import { Link } from "react-router-dom";
 
 const EAR_TRAINER = "https://trt-bot.github.io/guitar-interval-trainer/";
 
-const apps = [
+type AppCard = {
+  id: string;
+  pillar: string;
+  title: string;
+  description: string;
+  tags: string[];
+  to?: string;
+  href?: string;
+  external?: boolean;
+};
+
+const apps: AppCard[] = [
   {
     id: "interval-trainer",
-    title: "Guitar Interval Trainer",
+    pillar: "Hear",
+    title: "Interval Trainer",
     description:
-      "Train your ear on guitar intervals with interactive drills. Identify distances between notes by sound and build fretboard fluency.",
-    tags: ["Ear training", "Intervals", "Listening"],
+      "Identify guitar intervals by ear. Build the listening half of fretboard fluency.",
+    tags: ["Ear", "Intervals"],
     href: EAR_TRAINER,
     external: true,
-    status: "External",
   },
   {
     id: "metronome",
+    pillar: "Time",
     title: "Woodblock Metronome",
     description:
-      "A focused practice metronome with a natural woodblock click, smooth tempo slider, and easy one-tap practice timers.",
-    tags: ["Timing", "Practice", "Built-in"],
+      "Natural woodblock click, tempo control, and practice timers. Keep time without fuss.",
+    tags: ["Timing", "Practice"],
     to: "/metronome",
-    external: false,
-    status: "Built-in",
   },
   {
     id: "progressions",
-    title: "Chord Progression Explorer",
+    pillar: "Harmony",
+    title: "Progression Explorer",
     description:
-      "Bluegrass, gypsy jazz, pop, and a songwriting toolkit — transpose to any key, hear the changes, and learn why they work.",
-    tags: ["Harmony", "Genres", "Songwriting"],
+      "Bluegrass, gypsy jazz, pop, songwriting — transpose, loop at tempo, hear why changes work.",
+    tags: ["Chords", "Genres"],
     to: "/progressions",
-    external: false,
-    status: "Built-in",
   },
-] as const;
+  {
+    id: "notes",
+    pillar: "Fretboard",
+    title: "Note Lab",
+    description:
+      "Find and name notes on the neck (frets 0–12). Fast geography drills for intermediate hands.",
+    tags: ["Notes", "Drill"],
+    to: "/notes",
+  },
+  {
+    id: "scales",
+    pillar: "Lines",
+    title: "Scale & CAGED Lab",
+    description:
+      "One scale box at a time, plus movable CAGED major/minor shapes you can actually grip.",
+    tags: ["Scales", "CAGED"],
+    to: "/scales",
+  },
+];
 
 export function HomePage() {
   return (
     <>
-      <section className="hero" style={{ marginBottom: "3rem" }}>
-        <span className="badge badge-wood">Practice hub</span>
-        <h1 style={{ marginTop: "1rem" }}>
-          Everything you build for guitar, in one place.
-        </h1>
+      <section className="hero" style={{ marginBottom: "2.5rem" }}>
+        <span className="badge badge-wood">Intermediate practice lab</span>
+        <h1 style={{ marginTop: "1rem" }}>Guitar tools that stay out of your way.</h1>
         <p>
-          Fretboard Lab is a simple holding site for guitar apps — ear training,
-          timing tools, harmony explorers, and whatever comes next. Open a tool
-          and get to work.
+          Fretboard Lab is a focused set of practice apps — ear, time, harmony,
+          neck geography, and scale/CAGED shapes. Open one tool, practice with
+          intention, close the laptop.
         </p>
         <div className="hero-rule" aria-hidden />
+        <p className="practice-path">
+          <strong>Simple path:</strong> 5 min Note Lab → 5 min Scale box → loop a
+          progression at 80 BPM → push the metronome.
+        </p>
       </section>
 
       <section aria-labelledby="apps-heading">
         <div className="section-head">
           <div>
-            <h2 id="apps-heading">Apps</h2>
-            <p>{apps.length} tools ready to practice with</p>
+            <h2 id="apps-heading">The lab</h2>
+            <p>{apps.length} tools · same calm wood UI</p>
           </div>
         </div>
 
         <div className="app-grid">
           {apps.map((app) => (
             <article key={app.id} className="card app-card">
-              <div className="card-header" style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+              <div
+                className="card-header"
+                style={{ flex: 1, display: "flex", flexDirection: "column" }}
+              >
                 <div className="app-card-top">
-                  <div className="app-icon" aria-hidden>
-                    {app.id === "interval-trainer" && "◎"}
-                    {app.id === "metronome" && "⏱"}
-                    {app.id === "progressions" && "♯"}
-                  </div>
-                  <span
-                    className={`badge ${
-                      app.external ? "badge-outline" : "badge-wood"
-                    }`}
-                  >
-                    {app.status}
-                  </span>
+                  <span className="pillar-tag">{app.pillar}</span>
                 </div>
                 <h3 className="card-title">{app.title}</h3>
                 <p className="card-desc">{app.description}</p>
@@ -95,26 +116,17 @@ export function HomePage() {
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    Open app ↗
+                    Open ↗
                   </a>
                 ) : (
                   <Link className="btn btn-primary" to={app.to!}>
-                    Open app →
+                    Open →
                   </Link>
                 )}
               </div>
             </article>
           ))}
         </div>
-      </section>
-
-      <section className="note-panel">
-        <h2>Growing workshop</h2>
-        <p>
-          This hub is designed so new practice apps can land here as you build
-          them — tuners, chord quizzes, scale explorers, and more. Each card is
-          either a built-in tool on this site or a link to a dedicated app.
-        </p>
       </section>
     </>
   );
