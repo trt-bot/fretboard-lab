@@ -1313,10 +1313,15 @@ a {
   border-radius: var(--radius-lg);
   overflow: hidden;
   border: 1px solid var(--border-strong);
-  background: #1a1410;
+  background: #14110f;
   box-shadow: var(--shadow-panel);
   aspect-ratio: 3 / 2;
   max-height: min(52vh, 420px);
+}
+.acoustic-fb-frame--svg {
+  aspect-ratio: 1200 / 320;
+  max-height: none;
+  background: #14110f;
 }
 .acoustic-fb-img {
   display: block;
@@ -1326,6 +1331,11 @@ a {
   object-position: center 48%;
   user-select: none;
   pointer-events: none;
+}
+.acoustic-fb-img--svg {
+  object-fit: contain;
+  object-position: center;
+  background: #14110f;
 }
 .acoustic-fb-grid {
   position: absolute;
@@ -1433,6 +1443,15 @@ a {
   color: color-mix(in oklab, #fff 80%, transparent);
   text-shadow: 0 1px 2px #000;
 }
+.acoustic-fb-frame--svg .acoustic-fb-dot {
+  width: clamp(0.95rem, 1.8vw, 1.35rem);
+  height: clamp(0.95rem, 1.8vw, 1.35rem);
+  border-width: 1.5px;
+}
+.acoustic-fb-frame--svg .acoustic-fb-cell.is-interactive:hover {
+  background: color-mix(in oklab, var(--wood) 22%, transparent);
+  border-radius: 2px;
+}
 .acoustic-fb-caption {
   margin: 0.55rem 0 0;
   font-size: 0.75rem;
@@ -1445,7 +1464,15 @@ a {
     max-height: min(42vh, 320px);
     aspect-ratio: 16 / 11;
   }
+  .acoustic-fb-frame--svg {
+    max-height: none;
+    aspect-ratio: 1200 / 320;
+  }
   .acoustic-fb-slabel { font-size: 0.55rem; left: 0.2rem; }
+  .acoustic-fb-dot {
+    width: clamp(0.95rem, 3.2vw, 1.25rem);
+    height: clamp(0.95rem, 3.2vw, 1.25rem);
+  }
 }
 
 .caged-pattern-row { gap: 0.45rem; }

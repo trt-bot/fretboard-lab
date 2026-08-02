@@ -1,0 +1,104 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 320" role="img" aria-label="Guitar fretboard frets 0 to 12">
+  <defs>
+    <linearGradient id="wood" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#4a2f22"/>
+      <stop offset="35%" stop-color="#3a2419"/>
+      <stop offset="70%" stop-color="#2c1a12"/>
+      <stop offset="100%" stop-color="#24140e"/>
+    </linearGradient>
+    <linearGradient id="woodShine" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.04"/>
+      <stop offset="50%" stop-color="#ffffff" stop-opacity="0.08"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0.03"/>
+    </linearGradient>
+    <linearGradient id="fretGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#e8e4dc"/>
+      <stop offset="45%" stop-color="#b8b2a6"/>
+      <stop offset="100%" stop-color="#8a8478"/>
+    </linearGradient>
+    <filter id="soft" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="1" stdDeviation="1.2" flood-opacity="0.35"/>
+    </filter>
+    <pattern id="grain" width="120" height="80" patternUnits="userSpaceOnUse">
+      <path d="M0 10 Q30 12 60 8 T120 10" stroke="#5c3a28" stroke-width="0.6" fill="none" opacity="0.25"/>
+      <path d="M0 28 Q40 24 80 30 T120 26" stroke="#1a0e08" stroke-width="0.5" fill="none" opacity="0.3"/>
+      <path d="M0 48 Q25 52 55 46 T120 50" stroke="#6a4430" stroke-width="0.45" fill="none" opacity="0.2"/>
+      <path d="M0 66 Q50 62 90 68 T120 64" stroke="#1a0e08" stroke-width="0.4" fill="none" opacity="0.25"/>
+    </pattern>
+  </defs>
+  <rect width="1200" height="320" fill="#14110f"/>
+  <rect x="48" y="48" width="1104" height="200" rx="6" fill="url(#wood)"/>
+  <rect x="48" y="48" width="1104" height="200" rx="6" fill="url(#grain)" opacity="0.9"/>
+  <rect x="48" y="48" width="1104" height="200" rx="6" fill="url(#woodShine)"/>
+  <rect x="48" y="48" width="1104" height="7" fill="#e8dcc4"/>
+  <rect x="48" y="241" width="1104" height="7" fill="#e8dcc4"/>
+  <rect x="48" y="55" width="14" height="186" fill="#f3ead4"/>
+  <rect x="50" y="55" width="3" height="186" fill="#ffffff" opacity="0.35"/>
+  <rect x="182.95" y="55" width="2.8" height="186" fill="url(#fretGrad)" filter="url(#soft)"/>
+  <rect x="183.85" y="55" width="0.8" height="186" fill="#ffffff" opacity="0.35"/>
+  <rect x="298.44" y="55" width="2.8" height="186" fill="url(#fretGrad)" filter="url(#soft)"/>
+  <rect x="299.34" y="55" width="0.8" height="186" fill="#ffffff" opacity="0.35"/>
+  <rect x="407.45" y="55" width="2.8" height="186" fill="url(#fretGrad)" filter="url(#soft)"/>
+  <rect x="408.35" y="55" width="0.8" height="186" fill="#ffffff" opacity="0.35"/>
+  <rect x="510.33" y="55" width="2.8" height="186" fill="url(#fretGrad)" filter="url(#soft)"/>
+  <rect x="511.23" y="55" width="0.8" height="186" fill="#ffffff" opacity="0.35"/>
+  <rect x="607.45" y="55" width="2.8" height="186" fill="url(#fretGrad)" filter="url(#soft)"/>
+  <rect x="608.35" y="55" width="0.8" height="186" fill="#ffffff" opacity="0.35"/>
+  <rect x="699.11" y="55" width="2.8" height="186" fill="url(#fretGrad)" filter="url(#soft)"/>
+  <rect x="700.01" y="55" width="0.8" height="186" fill="#ffffff" opacity="0.35"/>
+  <rect x="785.62" y="55" width="2.8" height="186" fill="url(#fretGrad)" filter="url(#soft)"/>
+  <rect x="786.52" y="55" width="0.8" height="186" fill="#ffffff" opacity="0.35"/>
+  <rect x="867.29" y="55" width="2.8" height="186" fill="url(#fretGrad)" filter="url(#soft)"/>
+  <rect x="868.19" y="55" width="0.8" height="186" fill="#ffffff" opacity="0.35"/>
+  <rect x="944.36" y="55" width="2.8" height="186" fill="url(#fretGrad)" filter="url(#soft)"/>
+  <rect x="945.26" y="55" width="0.8" height="186" fill="#ffffff" opacity="0.35"/>
+  <rect x="1017.12" y="55" width="2.8" height="186" fill="url(#fretGrad)" filter="url(#soft)"/>
+  <rect x="1018.02" y="55" width="0.8" height="186" fill="#ffffff" opacity="0.35"/>
+  <rect x="1085.79" y="55" width="2.8" height="186" fill="url(#fretGrad)" filter="url(#soft)"/>
+  <rect x="1086.69" y="55" width="0.8" height="186" fill="#ffffff" opacity="0.35"/>
+  <rect x="1150.60" y="55" width="2.8" height="186" fill="url(#fretGrad)" filter="url(#soft)"/>
+  <rect x="1151.50" y="55" width="0.8" height="186" fill="#ffffff" opacity="0.35"/>
+  <circle cx="354.34" cy="148" r="6.5" fill="#e8e0d0"/>
+  <circle cx="354.34" cy="146.5" r="2.2" fill="#ffffff" opacity="0.45"/>
+  <circle cx="560.29" cy="148" r="6.5" fill="#e8e0d0"/>
+  <circle cx="560.29" cy="146.5" r="2.2" fill="#ffffff" opacity="0.45"/>
+  <circle cx="743.77" cy="148" r="6.5" fill="#e8e0d0"/>
+  <circle cx="743.77" cy="146.5" r="2.2" fill="#ffffff" opacity="0.45"/>
+  <circle cx="907.23" cy="148" r="6.5" fill="#e8e0d0"/>
+  <circle cx="907.23" cy="146.5" r="2.2" fill="#ffffff" opacity="0.45"/>
+  <circle cx="1119.59" cy="126" r="6.5" fill="#e8e0d0"/>
+  <circle cx="1119.59" cy="124.5" r="2.2" fill="#ffffff" opacity="0.45"/>
+  <circle cx="1119.59" cy="170" r="6.5" fill="#e8e0d0"/>
+  <circle cx="1119.59" cy="168.5" r="2.2" fill="#ffffff" opacity="0.45"/>
+  <line x1="48" y1="70.0" x2="1152" y2="70.0" stroke="#d8d2c4" stroke-width="0.90" opacity="0.9"/>
+  <line x1="48" y1="69.6" x2="1152" y2="69.6" stroke="#ffffff" stroke-width="0.35" opacity="0.25"/>
+  <line x1="48" y1="102.0" x2="1152" y2="102.0" stroke="#d8d2c4" stroke-width="1.25" opacity="0.9"/>
+  <line x1="48" y1="101.6" x2="1152" y2="101.6" stroke="#ffffff" stroke-width="0.35" opacity="0.25"/>
+  <line x1="48" y1="134.0" x2="1152" y2="134.0" stroke="#d8d2c4" stroke-width="1.60" opacity="0.9"/>
+  <line x1="48" y1="133.6" x2="1152" y2="133.6" stroke="#ffffff" stroke-width="0.35" opacity="0.25"/>
+  <line x1="48" y1="166.0" x2="1152" y2="166.0" stroke="#c4a574" stroke-width="1.95" opacity="0.85"/>
+  <line x1="48" y1="165.6" x2="1152" y2="165.6" stroke="#ffffff" stroke-width="0.35" opacity="0.25"/>
+  <line x1="48" y1="198.0" x2="1152" y2="198.0" stroke="#c4a574" stroke-width="2.30" opacity="0.85"/>
+  <line x1="48" y1="197.6" x2="1152" y2="197.6" stroke="#ffffff" stroke-width="0.35" opacity="0.25"/>
+  <line x1="48" y1="230.0" x2="1152" y2="230.0" stroke="#c4a574" stroke-width="2.65" opacity="0.85"/>
+  <line x1="48" y1="229.6" x2="1152" y2="229.6" stroke="#ffffff" stroke-width="0.35" opacity="0.25"/>
+  <text x="116.2" y="278" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="13" fill="#a8a29e">0</text>
+  <text x="123.2" y="278" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="13" fill="#a8a29e">1</text>
+  <text x="242.1" y="278" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="13" fill="#a8a29e">2</text>
+  <text x="354.3" y="278" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="13" fill="#a8a29e">3</text>
+  <text x="460.3" y="278" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="13" fill="#a8a29e">4</text>
+  <text x="560.3" y="278" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="13" fill="#a8a29e">5</text>
+  <text x="654.7" y="278" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="13" fill="#a8a29e">6</text>
+  <text x="743.8" y="278" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="13" fill="#a8a29e">7</text>
+  <text x="827.9" y="278" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="13" fill="#a8a29e">8</text>
+  <text x="907.2" y="278" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="13" fill="#a8a29e">9</text>
+  <text x="982.1" y="278" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="13" fill="#a8a29e">10</text>
+  <text x="1052.9" y="278" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="13" fill="#a8a29e">11</text>
+  <text x="1119.6" y="278" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="13" fill="#a8a29e">12</text>
+  <text x="28" y="74.0" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="12" font-weight="600" fill="#c4a574">e</text>
+  <text x="28" y="106.0" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="12" font-weight="600" fill="#c4a574">B</text>
+  <text x="28" y="138.0" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="12" font-weight="600" fill="#c4a574">G</text>
+  <text x="28" y="170.0" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="12" font-weight="600" fill="#c4a574">D</text>
+  <text x="28" y="202.0" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="12" font-weight="600" fill="#c4a574">A</text>
+  <text x="28" y="234.0" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="12" font-weight="600" fill="#c4a574">E</text>
+</svg>
