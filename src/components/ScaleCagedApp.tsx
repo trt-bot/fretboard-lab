@@ -7,12 +7,13 @@ import {
   type CagedQuality,
 } from "../lib/music/caged";
 import {
-  filterDotsInBox,
+  CAGED_PATTERN_ORDER,
+  cagedScalePatterns,
+  dotsForCagedPattern,
   getScale,
   rootPcFromKey,
   SCALES,
-  scaleBoxWindows,
-  scaleDotsOnNeck,
+  type CagedPatternLetter,
   type ScaleId,
 } from "../lib/music/scales";
 import {
@@ -23,7 +24,7 @@ import {
   preferFlatForKey,
   type KeyId,
 } from "../lib/music/theory";
-import { midiAt } from "../lib/music/fretboard";
+import { midiAt, STRING_LABELS } from "../lib/music/fretboard";
 import { playSequence, playMidiNote } from "../lib/chord-audio";
 import { unlockAudioSync } from "../lib/woodblock";
 import { Fretboard, type FretMark } from "./Fretboard";
@@ -35,15 +36,13 @@ const ROOTS = ["C", "G", "D", "A", "E", "F", "Bb", "B", "Eb", "Ab", "F#", "Db"] 
 export function ScaleCagedApp() {
   const [tab, setTab] = useState<Tab>("scales");
 
-  // Scales state
-  const [scaleId, setScaleId] = useState<ScaleId>("minorPent");
-  const [key, setKey] = useState<KeyId>("A");
-  const [boxId, setBoxId] = useState(1);
+  const [scaleId, setScaleId] = useState<ScaleId>("major");
+  const [key, setKey] = useState<KeyId>("G");
+  const [patternLetter, setPatternLetter] = useState<CagedPatternLetter>("E");
   const [playing, setPlaying] = useState(false);
   const [, setActiveIdx] = useState<number | null>(null);
   const cancelRef = useRef<(() => void) | null>(null);
 
-  // CAGED state
   const [cagedRoot, setCagedRoot] = useState<string>("G");
   const [cagedQuality, setCagedQuality] = useState<CagedQuality>("maj");
   const [cagedLetter, setCagedLetter] = useState<CagedLetter>("E");
@@ -52,33 +51,45 @@ export function ScaleCagedApp() {
   const preferFlat = preferFlatForKey(key);
   const rootPc = rootPcFromKey(key);
 
-  const boxes = useMemo(() => scaleBoxWindows(rootPc), [rootPc]);
-  const activeBox = boxes.find((b) => b.id === boxId) ?? boxes[0]!;
+  const patterns = useMemo(() => cagedScalePatterns(rootPc), [rootPc]);
+  const activePattern =
+    patterns.find((p) => p.letter === patternLetter) ?? patterns[0]!;
 
-  const allDots = useMemo(
-    () => scaleDotsOnNeck(rootPc, scale.intervals, preferFlat),
-    [rootPc, scale.intervals, preferFlat],
-  );
+  // If selected letter missing for this key (rare), fall back
+  const pattern =
+    activePattern ??
+    ({
+      letter: "E" as const,
+      label: "E pattern",
+      tip: "",
+      rootString: 0,
+      rootFret: 0,
+      fretStart: 0,
+      fretEnd: 4,
+    } as const);
 
-  const boxDots = useMemo(
-    () => filterDotsInBox(allDots, activeBox.fretStart, activeBox.fretEnd),
-    [allDots, activeBox],
+  const patternDots = useMemo(
+    () =>
+      dotsForCagedPattern(rootPc, scale.intervals, preferFlat, pattern),
+    [rootPc, scale.intervals, preferFlat, pattern],
   );
 
   const scaleMarks: FretMark[] = useMemo(() => {
-    return boxDots.map((d) => ({
+    return patternDots.map((d) => ({
       string: d.string,
       fret: d.fret,
       kind: d.isRoot ? "root" : "scale",
       label: d.isRoot ? "R" : String(d.degree),
     }));
-  }, [boxDots]);
+  }, [patternDots]);
 
-  // Sort notes for ascending play within box: by fret then string
   const sequenceMidis = useMemo(() => {
-    const sorted = [...boxDots].sort((a, b) => a.fret - b.fret || a.string - b.string);
+    // Play low→high: primarily by pitch
+    const sorted = [...patternDots].sort(
+      (a, b) => midiAt(a.string, a.fret) - midiAt(b.string, b.fret),
+    );
     return sorted.map((d) => midiAt(d.string, d.fret));
-  }, [boxDots]);
+  }, [patternDots]);
 
   const stop = () => {
     cancelRef.current?.();
@@ -109,7 +120,6 @@ export function ScaleCagedApp() {
     cancelRef.current = cancel;
   };
 
-  // CAGED placement
   const shape = getCagedShape(cagedLetter, cagedQuality);
   const rootPcCaged = noteToPc(cagedRoot);
   const placed = placeShape(shape, rootPcCaged);
@@ -131,10 +141,11 @@ export function ScaleCagedApp() {
       .filter((p) => p.fret >= 0)
       .map((p) => midiAt(p.string, p.absFret))
       .sort((a, b) => a - b);
-    // unique-ish
     const uniq = [...new Set(midis)].slice(0, 5);
     void playSequence(uniq, { noteSec: 0.12, volume: 0.26 });
   };
+
+  const rootStringLabel = STRING_LABELS[pattern.rootString] ?? "E";
 
   return (
     <div className="tool-page">
@@ -142,8 +153,8 @@ export function ScaleCagedApp() {
         <span className="badge badge-wood">Lines · shapes</span>
         <h1 className="tool-title">Scale & CAGED Lab</h1>
         <p className="tool-lede">
-          Map one scale box at a time, or park a movable CAGED chord shape under
-          your fingers. Built for intermediate improv and rhythm work.
+          The five CAGED scale patterns — C, A, G, E, D — plus movable chord
+          grips. One pattern at a time, intermediate and clear.
         </p>
       </div>
 
@@ -156,7 +167,7 @@ export function ScaleCagedApp() {
             setTab("scales");
           }}
         >
-          Scales
+          Scale patterns
         </button>
         <button
           type="button"
@@ -205,7 +216,6 @@ export function ScaleCagedApp() {
                     onClick={() => {
                       stop();
                       setKey(k);
-                      setBoxId(1);
                     }}
                   >
                     {k}
@@ -222,7 +232,6 @@ export function ScaleCagedApp() {
                     onClick={() => {
                       stop();
                       setKey(k);
-                      setBoxId(1);
                     }}
                   >
                     {k}
@@ -232,34 +241,45 @@ export function ScaleCagedApp() {
             </section>
 
             <section>
-              <h3 className="section-label">Position</h3>
-              <div className="chip-row">
-                {boxes.map((b) => (
-                  <button
-                    key={b.id}
-                    type="button"
-                    className={activeBox.id === b.id ? "chip active" : "chip"}
-                    onClick={() => {
-                      stop();
-                      setBoxId(b.id);
-                    }}
-                  >
-                    {b.label}
-                    <span className="chip-sub">
-                      {b.fretStart}–{b.fretEnd}
-                    </span>
-                  </button>
-                ))}
+              <h3 className="section-label">CAGED pattern</h3>
+              <div className="chip-row caged-pattern-row">
+                {CAGED_PATTERN_ORDER.map((letter) => {
+                  const p = patterns.find((x) => x.letter === letter);
+                  const selected = pattern.letter === letter;
+                  return (
+                    <button
+                      key={letter}
+                      type="button"
+                      className={selected ? "chip active caged-pat" : "chip caged-pat"}
+                      disabled={!p}
+                      onClick={() => {
+                        stop();
+                        setPatternLetter(letter);
+                      }}
+                    >
+                      <span className="caged-pat-letter">{letter}</span>
+                      <span className="chip-sub">
+                        {p ? `frets ${p.fretStart}–${p.fretEnd}` : "—"}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
+              <p className="hint" style={{ textAlign: "left", margin: "0.5rem 0 0" }}>
+                {pattern.label} · root on {rootStringLabel} string (fret{" "}
+                {pattern.rootFret})
+              </p>
             </section>
 
             <Fretboard
+              frets={Math.max(12, pattern.fretEnd)}
               marks={scaleMarks}
-              windowStart={activeBox.fretStart}
-              windowEnd={activeBox.fretEnd}
+              windowStart={pattern.fretStart}
+              windowEnd={pattern.fretEnd}
               footer={
                 <p className="fret-legend">
-                  <span className="leg root">R</span> root · numbers are scale degrees
+                  <span className="leg root">R</span> root · numbers are scale
+                  degrees · five CAGED patterns
                 </p>
               }
             />
@@ -287,9 +307,10 @@ export function ScaleCagedApp() {
 
             <div className="info-block">
               <h4>
-                {scale.label} in {key}
+                {scale.label} in {key} — {pattern.label}
               </h4>
-              <p>{scale.tip}</p>
+              <p>{pattern.tip}</p>
+              <p style={{ marginTop: "0.5rem" }}>{scale.tip}</p>
               <p style={{ marginTop: "0.5rem" }}>
                 Tones:{" "}
                 {scale.intervals
@@ -346,10 +367,10 @@ export function ScaleCagedApp() {
                   <button
                     key={L}
                     type="button"
-                    className={cagedLetter === L ? "chip active" : "chip"}
+                    className={cagedLetter === L ? "chip active caged-pat" : "chip caged-pat"}
                     onClick={() => setCagedLetter(L)}
                   >
-                    {L}
+                    <span className="caged-pat-letter">{L}</span>
                   </button>
                 ))}
               </div>
@@ -360,7 +381,8 @@ export function ScaleCagedApp() {
               marks={cagedMarks}
               footer={
                 <p className="fret-legend">
-                  <span className="leg root">R</span> root · numbers = suggested fingers
+                  <span className="leg root">R</span> root · numbers = suggested
+                  fingers
                 </p>
               }
             />
@@ -388,15 +410,14 @@ export function ScaleCagedApp() {
               <p>{shape.tip}</p>
               {placed ? (
                 <p style={{ marginTop: "0.5rem" }}>
-                  Root fret reference around fret {placed.rootFret || "open"} · shape
-                  sits near frets{" "}
+                  Root reference fret {placed.rootFret || "open"} · shape frets{" "}
                   {Math.min(...placed.placed.map((p) => p.absFret))}–
                   {Math.max(...placed.placed.map((p) => p.absFret))}
                 </p>
               ) : (
                 <p style={{ marginTop: "0.5rem" }}>
-                  Couldn’t place this shape in frets 0–12 for that root — try another
-                  letter.
+                  Couldn’t place this shape in frets 0–12 for that root — try
+                  another letter.
                 </p>
               )}
             </div>

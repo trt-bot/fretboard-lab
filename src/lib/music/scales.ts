@@ -44,7 +44,7 @@ export const SCALES: ScaleDef[] = [
     label: "Minor pentatonic",
     short: "Min pent",
     intervals: [0, 3, 5, 7, 10],
-    tip: "Blues/rock default. Add the ♭5 (blue note) later once the box is automatic.",
+    tip: "Blues/rock default. Add the ♭5 (blue note) later once the pattern is automatic.",
   },
   {
     id: "mixolydian",
@@ -66,10 +66,6 @@ export function getScale(id: ScaleId): ScaleDef {
   return SCALES.find((s) => s.id === id)!;
 }
 
-export function scalePcs(rootPc: number, intervals: number[]): number[] {
-  return intervals.map((i) => (rootPc + i) % 12);
-}
-
 export function rootPcFromKey(key: KeyId): number {
   return noteToPc(keyRootName(key));
 }
@@ -78,12 +74,11 @@ export type NeckDot = {
   string: number;
   fret: number;
   pc: number;
-  degree: number; // 1-based index in scale intervals
+  degree: number;
   isRoot: boolean;
   label: string;
 };
 
-/** All scale tones on frets 0–maxFret */
 export function scaleDotsOnNeck(
   rootPc: number,
   intervals: number[],
@@ -110,38 +105,281 @@ export function scaleDotsOnNeck(
   return dots;
 }
 
+/** CAGED scale pattern letters — the classic five shapes */
+export type CagedPatternLetter = "C" | "A" | "G" | "E" | "D";
+
+export const CAGED_PATTERN_ORDER: CagedPatternLetter[] = ["C", "A", "G", "E", "D"];
+
 /**
- * CAGED-style box windows for a scale: five overlapping 4-fret regions
- * anchored to the lowest root on string 0 (low E) within frets 0–12.
+ * Major-scale CAGED pattern fingerings as fret offsets from the pattern root.
+ * rootString = which string holds the defining root at offset 0.
+ * Patterns follow common intermediate CAGED teaching grips.
  */
-export function scaleBoxWindows(rootPc: number): Array<{ id: number; label: string; fretStart: number; fretEnd: number }> {
-  // Find root frets on low E
-  const roots: number[] = [];
-  for (let f = 0; f <= FRET_MAX; f++) {
-    if ((OPEN_STRING_PC[0]! + f) % 12 === rootPc) roots.push(f);
+type RelNote = { string: number; fret: number; root?: boolean };
+
+const MAJOR_CAGED_PATTERNS: Record<
+  CagedPatternLetter,
+  { rootString: number; label: string; tip: string; notes: RelNote[] }
+> = {
+  // E shape — open E major family; roots on 6th & 1st
+  E: {
+    rootString: 0,
+    label: "E pattern",
+    tip: "Like an E barre chord. Roots on the low E and high e — the most common “home” pattern.",
+    notes: [
+      { string: 0, fret: 0, root: true },
+      { string: 0, fret: 2 },
+      { string: 0, fret: 3 },
+      { string: 1, fret: 0 },
+      { string: 1, fret: 2 },
+      { string: 1, fret: 3 },
+      { string: 2, fret: 1 },
+      { string: 2, fret: 2 },
+      { string: 2, fret: 4 },
+      { string: 3, fret: 1 },
+      { string: 3, fret: 2 },
+      { string: 3, fret: 4 },
+      { string: 4, fret: 0 },
+      { string: 4, fret: 2 },
+      { string: 4, fret: 4 },
+      { string: 5, fret: 0, root: true },
+      { string: 5, fret: 2 },
+      { string: 5, fret: 4 },
+    ],
+  },
+  // D shape — root on D string
+  D: {
+    rootString: 2,
+    label: "D pattern",
+    tip: "Sits under a D-shape triad. Compact — great for double-stops on the top four strings.",
+    notes: [
+      { string: 0, fret: 0 },
+      { string: 0, fret: 2 },
+      { string: 0, fret: 3 },
+      { string: 1, fret: 0 },
+      { string: 1, fret: 2 },
+      { string: 1, fret: 3 },
+      { string: 2, fret: 0, root: true },
+      { string: 2, fret: 2 },
+      { string: 2, fret: 4 },
+      { string: 3, fret: 0 },
+      { string: 3, fret: 2 },
+      { string: 3, fret: 4 },
+      { string: 4, fret: 2 },
+      { string: 4, fret: 3 },
+      { string: 4, fret: 5 },
+      { string: 5, fret: 2 },
+      { string: 5, fret: 3 },
+      { string: 5, fret: 5 },
+    ],
+  },
+  // C shape — root on A string (like open C)
+  C: {
+    rootString: 1,
+    label: "C pattern",
+    tip: "Built around the C-shape chord. Root on the A string — connect it to the A pattern above it.",
+    notes: [
+      { string: 0, fret: 0 },
+      { string: 0, fret: 1 },
+      { string: 0, fret: 3 },
+      { string: 1, fret: 0, root: true },
+      { string: 1, fret: 2 },
+      { string: 1, fret: 3 },
+      { string: 2, fret: 0 },
+      { string: 2, fret: 2 },
+      { string: 2, fret: 3 },
+      { string: 3, fret: 0 },
+      { string: 3, fret: 2 },
+      { string: 3, fret: 4 },
+      { string: 4, fret: 1 },
+      { string: 4, fret: 3 },
+      { string: 4, fret: 5 },
+      { string: 5, fret: 1 },
+      { string: 5, fret: 3 },
+      { string: 5, fret: 5 },
+    ],
+  },
+  // A shape — root on A string (open A family)
+  A: {
+    rootString: 1,
+    label: "A pattern",
+    tip: "Like an A barre chord. Root on the A string; pairs with the E pattern a string set lower.",
+    notes: [
+      { string: 0, fret: 2 },
+      { string: 0, fret: 3 },
+      { string: 0, fret: 5 },
+      { string: 1, fret: 0, root: true },
+      { string: 1, fret: 2 },
+      { string: 1, fret: 3 },
+      { string: 2, fret: 0 },
+      { string: 2, fret: 2 },
+      { string: 2, fret: 4 },
+      { string: 3, fret: 0 },
+      { string: 3, fret: 2 },
+      { string: 3, fret: 4 },
+      { string: 4, fret: 2 },
+      { string: 4, fret: 3 },
+      { string: 4, fret: 5 },
+      { string: 5, fret: 2 },
+      { string: 5, fret: 3 },
+      { string: 5, fret: 5 },
+    ],
+  },
+  // G shape — roots on 6th & 1st (open G family)
+  G: {
+    rootString: 0,
+    label: "G pattern",
+    tip: "Open G family. Roots on low E and high e three frets above a neighboring E pattern root.",
+    notes: [
+      { string: 0, fret: 0, root: true },
+      { string: 0, fret: 2 },
+      { string: 0, fret: 3 },
+      { string: 1, fret: 0 },
+      { string: 1, fret: 2 },
+      { string: 1, fret: 4 },
+      { string: 2, fret: 0 },
+      { string: 2, fret: 2 },
+      { string: 2, fret: 4 },
+      { string: 3, fret: 0 },
+      { string: 3, fret: 2 },
+      { string: 3, fret: 4 },
+      { string: 4, fret: 0 },
+      { string: 4, fret: 1 },
+      { string: 4, fret: 3 },
+      { string: 5, fret: 0, root: true },
+      { string: 5, fret: 1 },
+      { string: 5, fret: 3 },
+    ],
+  },
+};
+
+export type CagedScalePattern = {
+  letter: CagedPatternLetter;
+  label: string;
+  tip: string;
+  rootString: number;
+  /** Absolute root fret used for this placement (on rootString) */
+  rootFret: number;
+  /** Inclusive fret window covered by the pattern */
+  fretStart: number;
+  fretEnd: number;
+};
+
+function findRootFrets(stringIndex: number, rootPc: number, maxFret = 15): number[] {
+  const out: number[] = [];
+  for (let f = 0; f <= maxFret; f++) {
+    if ((OPEN_STRING_PC[stringIndex]! + f) % 12 === rootPc) out.push(f);
   }
-  const anchor = roots[0] ?? 0;
-  // Five boxes stepping up the neck
-  const starts = [anchor, anchor + 2, anchor + 4, anchor + 7, anchor + 9].map((x) =>
-    Math.max(0, Math.min(9, x)),
+  return out;
+}
+
+/**
+ * Place all five CAGED scale patterns for a key root on the neck.
+ * Prefers placements that sit mostly within frets 0–12.
+ */
+export function cagedScalePatterns(rootPc: number): CagedScalePattern[] {
+  const patterns: CagedScalePattern[] = [];
+
+  for (const letter of CAGED_PATTERN_ORDER) {
+    const def = MAJOR_CAGED_PATTERNS[letter];
+    const candidates = findRootFrets(def.rootString, rootPc, 15);
+
+    let best: CagedScalePattern | null = null;
+    let bestScore = Infinity;
+
+    for (const rootFret of candidates) {
+      const absFrets = def.notes.map((n) => rootFret + n.fret);
+      const fretStart = Math.min(...absFrets);
+      const fretEnd = Math.max(...absFrets);
+      // Prefer patterns fully or mostly on 0–12
+      if (fretEnd < 0 || fretStart > 14) continue;
+      const outOfRange =
+        absFrets.filter((f) => f < 0 || f > FRET_MAX).length +
+        Math.max(0, fretEnd - FRET_MAX) +
+        Math.max(0, -fretStart);
+      const score = outOfRange * 10 + fretStart; // prefer lower neck when tied
+      if (score < bestScore) {
+        bestScore = score;
+        best = {
+          letter,
+          label: def.label,
+          tip: def.tip,
+          rootString: def.rootString,
+          rootFret,
+          fretStart: Math.max(0, fretStart),
+          fretEnd: Math.min(15, fretEnd),
+        };
+      }
+    }
+
+    if (best) patterns.push(best);
+  }
+
+  return patterns;
+}
+
+/**
+ * Dots for a CAGED pattern: scale tones that fall on the pattern’s
+ * string/fret offsets (major grip skeleton), filtered to the active scale.
+ * Also includes any extra scale tones strictly inside the same per-string
+ * fret span so pentatonics/modes still look complete in-hand.
+ */
+export function dotsForCagedPattern(
+  rootPc: number,
+  intervals: number[],
+  preferFlat: boolean,
+  pattern: CagedScalePattern,
+): NeckDot[] {
+  const def = MAJOR_CAGED_PATTERNS[pattern.letter];
+  const scaleSet = new Map(
+    intervals.map((iv, idx) => [(rootPc + iv) % 12, idx] as const),
   );
-  // Unique-ish windows
-  const seen = new Set<number>();
-  const boxes: Array<{ id: number; label: string; fretStart: number; fretEnd: number }> = [];
-  let id = 1;
-  for (const start of starts) {
-    if (seen.has(start)) continue;
-    seen.add(start);
-    boxes.push({
-      id,
-      label: `Box ${id}`,
-      fretStart: start,
-      fretEnd: Math.min(FRET_MAX, start + 4),
-    });
-    id += 1;
-    if (boxes.length >= 5) break;
+
+  // Per-string offset range from the major skeleton
+  const ranges = new Map<number, { min: number; max: number }>();
+  for (const n of def.notes) {
+    const cur = ranges.get(n.string) ?? { min: n.fret, max: n.fret };
+    cur.min = Math.min(cur.min, n.fret);
+    cur.max = Math.max(cur.max, n.fret);
+    ranges.set(n.string, cur);
   }
-  return boxes;
+
+  const dots: NeckDot[] = [];
+  const seen = new Set<string>();
+
+  for (const [s, range] of ranges) {
+    for (let off = range.min; off <= range.max; off++) {
+      const fret = pattern.rootFret + off;
+      if (fret < 0 || fret > 15) continue;
+      const pc = pcAt(s, fret);
+      const idx = scaleSet.get(pc);
+      if (idx === undefined) continue;
+      const key = `${s}-${fret}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      dots.push({
+        string: s,
+        fret,
+        pc,
+        degree: idx + 1,
+        isRoot: idx === 0,
+        label: pcToName(pc, preferFlat),
+      });
+    }
+  }
+
+  return dots;
+}
+
+/** @deprecated use cagedScalePatterns */
+export function scaleBoxWindows(rootPc: number) {
+  return cagedScalePatterns(rootPc).map((p, i) => ({
+    id: i + 1,
+    label: p.label,
+    fretStart: p.fretStart,
+    fretEnd: p.fretEnd,
+    letter: p.letter,
+  }));
 }
 
 export function filterDotsInBox(
