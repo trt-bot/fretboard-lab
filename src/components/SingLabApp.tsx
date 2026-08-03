@@ -15,12 +15,11 @@ import {
   type SingRoot,
 } from "../lib/sing/exercises";
 import { unlockAudioSync } from "../lib/woodblock";
-
-const CENTS_RANGE = 50; // display ±50 cents
-
-function clamp(n: number, a: number, b: number) {
-  return Math.max(a, Math.min(b, n));
-}
+import {
+  PitchLineGraph,
+  appendPitchSample,
+  type PitchSample,
+} from "./PitchLineGraph";
 
 export function SingLabApp() {
   const [root, setRoot] = useState<SingRoot>("G");
@@ -31,8 +30,11 @@ export function SingLabApp() {
   const [micError, setMicError] = useState<string | null>(null);
   const [pitch, setPitch] = useState<PitchFrame | null>(null);
   const [autoAdvance, setAutoAdvance] = useState(true);
+  const [graphRev, setGraphRev] = useState(0);
   const monitorRef = useRef<MicPitchMonitor | null>(null);
   const holdOkRef = useRef(0);
+  const samplesRef = useRef<PitchSample[]>([]);
+  const lastUiRef = useRef(0);
 
   const notes = useMemo(
     () => buildExercise(root, quality, exerciseId),
@@ -42,7 +44,6 @@ export function SingLabApp() {
   const exercise = EXERCISES.find((e) => e.id === exerciseId)!;
   const chordName = chordLabel(root, quality);
 
-  // cents vs target note
   const targetCents = useMemo(() => {
     if (!pitch?.frequency || !target) return null;
     if ((pitch.clarity ?? 0) < 0.55) return null;
@@ -57,9 +58,15 @@ export function SingLabApp() {
     holdOkRef.current = 0;
   }, []);
 
+  const clearTrail = useCallback(() => {
+    samplesRef.current = [];
+    setGraphRev((n) => n + 1);
+  }, []);
+
   useEffect(() => {
     resetStep();
-  }, [root, quality, exerciseId, resetStep]);
+    clearTrail();
+  }, [root, quality, exerciseId, resetStep, clearTrail]);
 
   useEffect(() => {
     return () => {
@@ -68,19 +75,27 @@ export function SingLabApp() {
     };
   }, []);
 
-  // Auto-advance when held in tune
   useEffect(() => {
     if (!listening || !autoAdvance || !inTune) {
       holdOkRef.current = 0;
       return;
     }
     holdOkRef.current += 1;
-    // ~20 frames ≈ 1/3s at 60fps; require sustained
     if (holdOkRef.current > 28) {
       holdOkRef.current = 0;
       setStep((s) => (s + 1) % notes.length);
     }
   }, [pitch, listening, autoAdvance, inTune, notes.length]);
+
+  const onPitchFrame = useCallback((frame: PitchFrame) => {
+    appendPitchSample(samplesRef.current, frame, 12);
+    const now = performance.now();
+    // throttle React status UI ~15fps; canvas reads samplesRef every frame
+    if (now - lastUiRef.current > 66) {
+      lastUiRef.current = now;
+      setPitch(frame);
+    }
+  }, []);
 
   const playChord = async () => {
     unlockAudioSync();
@@ -103,10 +118,11 @@ export function SingLabApp() {
   const startMic = async () => {
     setMicError(null);
     unlockAudioSync();
+    clearTrail();
     try {
       const mon = new MicPitchMonitor();
       monitorRef.current = mon;
-      await mon.start((frame) => setPitch(frame));
+      await mon.start(onPitchFrame);
       setListening(true);
     } catch (e) {
       const msg =
@@ -128,18 +144,13 @@ export function SingLabApp() {
     holdOkRef.current = 0;
   };
 
-  const needlePct = useMemo(() => {
-    if (targetCents === null) return 50;
-    return clamp(50 + (targetCents / CENTS_RANGE) * 50, 4, 96);
-  }, [targetCents]);
-
   const statusLabel =
     !listening
       ? "Mic off"
       : targetCents === null
         ? pitch?.frequency
           ? "Listening…"
-          : "Sing the target note"
+          : "Sing the highlighted lane"
         : inTune
           ? "In tune"
           : close
@@ -154,8 +165,8 @@ export function SingLabApp() {
         <span className="badge badge-wood">Voice · ear</span>
         <h1 className="tool-title">Sing Lab</h1>
         <p className="tool-lede">
-          Sing scales and arpeggios over a real guitar chord. Watch the pitch
-          meter and lock each target note before moving on.
+          Sing scales and arpeggios over a guitar chord. Your pitch draws a
+          moving line — stay in the target lane like a studio pitch track.
         </p>
       </div>
 
@@ -216,10 +227,9 @@ export function SingLabApp() {
             </p>
           </section>
 
-          {/* Target + sequence */}
           <div className="sing-target-panel">
             <div className="sing-target-main">
-              <span className="prompt-kicker">Sing this</span>
+              <span className="prompt-kicker">Target lane</span>
               <div className="sing-target-note">
                 <span className="sing-deg">{target.degree}</span>
                 <span className="sing-name">{target.label}</span>
@@ -247,63 +257,63 @@ export function SingLabApp() {
             </div>
           </div>
 
-          {/* Pitch meter */}
+          {/* Scrolling pitch line graph */}
           <div className="pitch-meter-card">
             <div className="control-row">
-              <h3>Pitch meter</h3>
+              <h3>Pitch track</h3>
               <span
                 className={`pitch-status ${
                   inTune ? "ok" : close ? "near" : targetCents !== null ? "off" : ""
                 }`}
               >
                 {statusLabel}
-                {targetCents !== null ? ` · ${targetCents > 0 ? "+" : ""}${Math.round(targetCents)}¢` : ""}
+                {targetCents !== null
+                  ? ` · ${targetCents > 0 ? "+" : ""}${Math.round(targetCents)}¢`
+                  : ""}
               </span>
             </div>
 
-            <div className="pitch-meter" aria-live="polite">
-              <div className="pitch-scale">
-                <span>−50¢</span>
-                <span>in tune</span>
-                <span>+50¢</span>
+            <PitchLineGraph
+              notes={notes}
+              step={step}
+              samplesRef={samplesRef}
+              listening={listening}
+              windowSec={8}
+              revision={graphRev}
+            />
+
+            <div className="pitch-readout">
+              <div>
+                <span className="pitch-k">You</span>
+                <strong>
+                  {pitch?.noteName && pitch.frequency
+                    ? `${pitch.noteName} · ${Math.round(pitch.frequency)} Hz`
+                    : "—"}
+                </strong>
               </div>
-              <div className="pitch-track">
-                <div className="pitch-zone near" />
-                <div className="pitch-zone ok" />
-                <div
-                  className={`pitch-needle ${targetCents === null ? "idle" : inTune ? "ok" : close ? "near" : "off"}`}
-                  style={{ left: `${needlePct}%` }}
-                />
-                <div className="pitch-center" />
-              </div>
-              <div className="pitch-readout">
-                <div>
-                  <span className="pitch-k">You</span>
-                  <strong>
-                    {pitch?.noteName && pitch.frequency
-                      ? `${pitch.noteName} · ${Math.round(pitch.frequency)} Hz`
-                      : "—"}
-                  </strong>
-                </div>
-                <div>
-                  <span className="pitch-k">Target</span>
-                  <strong>
-                    {target.label} · {Math.round(target.freq)} Hz
-                  </strong>
-                </div>
+              <div>
+                <span className="pitch-k">Target</span>
+                <strong>
+                  {target.label} · {Math.round(target.freq)} Hz
+                </strong>
               </div>
             </div>
 
             {micError && <p className="feedback bad">{micError}</p>}
 
-            <label className="check-row" style={{ marginTop: "0.35rem" }}>
-              <input
-                type="checkbox"
-                checked={autoAdvance}
-                onChange={(e) => setAutoAdvance(e.target.checked)}
-              />
-              Auto-advance when held in tune (~½ sec)
-            </label>
+            <div className="sing-graph-actions">
+              <label className="check-row">
+                <input
+                  type="checkbox"
+                  checked={autoAdvance}
+                  onChange={(e) => setAutoAdvance(e.target.checked)}
+                />
+                Auto-advance when held in tune (~½ sec)
+              </label>
+              <button type="button" className="btn btn-secondary" onClick={clearTrail}>
+                Clear trail
+              </button>
+            </div>
           </div>
 
           <div className="transport sing-transport">
@@ -356,13 +366,13 @@ export function SingLabApp() {
           <div className="info-block">
             <h4>How to practice</h4>
             <p>
-              1) Play the <strong>{chordName}</strong> guitar chord for context.
-              2) Start the mic and sing the highlighted degree.
-              3) Center the needle (green = within ~15 cents). Optional auto-advance moves you through the exercise.
+              1) Play the <strong>{chordName}</strong> chord for context.
+              2) Start the mic — your pitch draws a continuous line across the track.
+              3) Hold the line inside the green target lane (within ~15¢). Optional auto-advance steps through the scale or arpeggio.
             </p>
             <p style={{ marginTop: "0.5rem" }}>
-              Works best in a quiet room with headphones so the chord doesn’t
-              confuse the pitch detector. Allow microphone access when prompted.
+              Use headphones so the guitar doesn’t throw the detector. Quiet room
+              works best.
             </p>
           </div>
         </div>
