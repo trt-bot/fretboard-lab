@@ -157,7 +157,7 @@ export function ScaleCagedApp() {
         <span className="badge badge-wood">Lines · shapes</span>
         <h1 className="tool-title">Scale & CAGED Lab</h1>
         <p className="tool-lede">
-          The five CAGED scale patterns — C, A, G, E, D — plus movable chord grips. One pattern at a time, max five frets per string (whole+whole stretches move up a string).
+          The standard five CAGED scale patterns (C, A, G, E, D) — the same five-pattern system used for major, minor, and pentatonics — plus movable chord grips. One pattern at a time.
         </p>
       </div>
 
@@ -244,7 +244,7 @@ export function ScaleCagedApp() {
             </section>
 
             <section>
-              <h3 className="section-label">CAGED pattern</h3>
+              <h3 className="section-label">Scale pattern</h3>
               <div className="chip-row caged-pattern-row">
                 {CAGED_PATTERN_ORDER.map((letter) => {
                   const p = patterns.find((x) => x.letter === letter);
@@ -281,7 +281,7 @@ export function ScaleCagedApp() {
               footer={
                 <p className="fret-legend">
                   <span className="leg root">R</span> root · numbers are scale
-                  degrees · five CAGED patterns
+                  degrees · standard five-pattern system
                 </p>
               }
             />
