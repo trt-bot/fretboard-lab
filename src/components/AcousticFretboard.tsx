@@ -45,19 +45,16 @@ function cellXRange(wires: number[], fret: number): { leftPct: number; widthPct:
 }
 
 function stringCenterY(displayRow: number): number {
-  // Matches string lines in public/fretboard-hd.svg (compact layout)
   const yTop = 40;
   const yBot = 200;
   return yTop + displayRow * ((yBot - yTop) / (STRING_COUNT - 1));
 }
 
 type Props = {
-  /** Always capped at 12 — SVG neck is frets 0–12 */
   frets?: number;
   marks?: FretMark[];
   onCellClick?: (string: number, fret: number) => void;
   interactive?: boolean;
-  /** Dim frets outside this inclusive window (scale pattern highlight) */
   windowStart?: number;
   windowEnd?: number;
   className?: string;
@@ -76,7 +73,6 @@ export function AcousticFretboard({
   footer,
   caption,
 }: Props) {
-  // SVG only has frets 0–12
   const fretCount = Math.min(FRET_MAX, Math.max(1, frets));
   const wires = useMemo(() => fretWireXs(fretCount), [fretCount]);
 
@@ -91,7 +87,10 @@ export function AcousticFretboard({
 
   return (
     <div className={`acoustic-fb ${className}`}>
-      <div className="acoustic-fb-frame acoustic-fb-frame--svg">
+      <div
+        className="acoustic-fb-frame acoustic-fb-frame--svg"
+        style={{ aspectRatio: "1200 / 270" }}
+      >
         <img
           src={IMG}
           alt="Precision guitar fretboard, frets 0 through 12, standard tuning"
@@ -99,7 +98,6 @@ export function AcousticFretboard({
           draggable={false}
         />
 
-        {/* Optional pattern window veil */}
         {windowStart !== undefined && windowEnd !== undefined && (
           <div className="acoustic-fb-window-veil" aria-hidden>
             {windowStart > 0 && (
