@@ -4,12 +4,13 @@ import type { FretMark } from "./Fretboard";
 
 /**
  * Precision SVG fretboard (shared by Note Lab + Scale & CAGED Lab).
- * Geometry mirrors public/fretboard-hd.svg (viewBox 1200×320), frets 0–12.
+ * Geometry mirrors public/fretboard-hd.svg (viewBox 1200×270), frets 0–12.
+ * Double inlays at frets 5 and 12; single at 3, 7, 9.
  */
 const IMG = `${import.meta.env.BASE_URL}fretboard-hd.svg`;
 
 const VB_W = 1200;
-const VB_H = 320;
+const VB_H = 270;
 const BOARD_X0 = 48;
 const BOARD_X1 = 1152;
 const NUT_W = 14;
@@ -44,8 +45,9 @@ function cellXRange(wires: number[], fret: number): { leftPct: number; widthPct:
 }
 
 function stringCenterY(displayRow: number): number {
-  const yTop = 70;
-  const yBot = 230;
+  // Matches string lines in public/fretboard-hd.svg (compact layout)
+  const yTop = 40;
+  const yBot = 200;
   return yTop + displayRow * ((yBot - yTop) / (STRING_COUNT - 1));
 }
 
@@ -128,7 +130,7 @@ export function AcousticFretboard({
           {Array.from({ length: STRING_COUNT }, (_, stringIndex) => {
             const displayRow = STRING_COUNT - 1 - stringIndex;
             const cy = stringCenterY(displayRow);
-            const rowH = ((230 - 70) / (STRING_COUNT - 1)) * 0.92;
+            const rowH = ((200 - 40) / (STRING_COUNT - 1)) * 0.92;
             const topPct = ((cy - rowH / 2) / VB_H) * 100;
             const heightPct = (rowH / VB_H) * 100;
 
