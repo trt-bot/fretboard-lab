@@ -35,6 +35,7 @@ export function SingLabApp() {
   const holdOkRef = useRef(0);
   const samplesRef = useRef<PitchSample[]>([]);
   const lastUiRef = useRef(0);
+  const [exerciseStartT, setExerciseStartT] = useState<number | null>(null);
 
   const notes = useMemo(
     () => buildExercise(root, quality, exerciseId),
@@ -90,7 +91,6 @@ export function SingLabApp() {
   const onPitchFrame = useCallback((frame: PitchFrame) => {
     appendPitchSample(samplesRef.current, frame, 12);
     const now = performance.now();
-    // throttle React status UI ~15fps; canvas reads samplesRef every frame
     if (now - lastUiRef.current > 66) {
       lastUiRef.current = now;
       setPitch(frame);
@@ -123,6 +123,7 @@ export function SingLabApp() {
       const mon = new MicPitchMonitor();
       monitorRef.current = mon;
       await mon.start(onPitchFrame);
+      setExerciseStartT(performance.now());
       setListening(true);
     } catch (e) {
       const msg =
@@ -140,6 +141,7 @@ export function SingLabApp() {
     monitorRef.current?.stop();
     monitorRef.current = null;
     setListening(false);
+    setExerciseStartT(null);
     setPitch(null);
     holdOkRef.current = 0;
   };
@@ -257,7 +259,6 @@ export function SingLabApp() {
             </div>
           </div>
 
-          {/* Scrolling pitch line graph */}
           <div className="pitch-meter-card">
             <div className="control-row">
               <h3>Pitch track</h3>
@@ -275,10 +276,10 @@ export function SingLabApp() {
 
             <PitchLineGraph
               notes={notes}
-              step={step}
+              exerciseStartT={exerciseStartT}
+              activeStep={step}
               samplesRef={samplesRef}
               listening={listening}
-              windowSec={8}
               revision={graphRev}
             />
 
